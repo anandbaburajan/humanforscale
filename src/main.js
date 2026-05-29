@@ -22,8 +22,25 @@ const HUMAN_SCALE = {
   width: 0.45,
   height: 1.75,
 };
+const CAMERA_NEAR = 0.01;
+const CAMERA_FAR = 2600;
+const MIN_CAMERA_DISTANCE = 0.025;
+const MAX_CAMERA_DISTANCE = 2400;
+const MIN_ORBIT_TARGET_DISTANCE = 0.12;
+const WHEEL_ZOOM_SPEED = 0.004;
+const WHEEL_LINE_HEIGHT = 16;
+const PINCH_ZOOM_POWER = 1.45;
 const INITIAL_CAMERA_TARGET = new THREE.Vector3(50, 5, -55);
 const INITIAL_CAMERA_POSITION = new THREE.Vector3(-20, 14, 35);
+const WORLD_FOCUS_CENTER = new THREE.Vector3(GROUND_CENTER_X, 0, -75);
+const WORLD_FOCUS_RADIUS = GROUND_SIZE * 0.72;
+const TAP_FOCUS_MAX_DURATION = 280;
+const TAP_FOCUS_MAX_MOVEMENT = 10;
+const DOUBLE_TAP_MAX_DELAY = 360;
+const DOUBLE_TAP_MAX_MOVEMENT = 34;
+const FOCUS_DISTANCE_SCALE = 0.45;
+const FOCUS_MIN_DISTANCE = 1.2;
+const FOCUS_MAX_DISTANCE = 180;
 
 const sceneRoot = document.querySelector('#app');
 
@@ -46,12 +63,28 @@ const camera = new THREE.PerspectiveCamera(48, sceneRoot.clientWidth / sceneRoot
 camera.position.set(56, 34, 72);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.075;
-controls.maxPolarAngle = Math.PI * 0.48;
-controls.minDistance = 0.8;
-controls.maxDistance = 1800;
-controls.target.set(50, 0.9, 0);
+configureControls();
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const pointerRay = new THREE.Ray();
+const cameraForward = new THREE.Vector3();
+const dollyMove = new THREE.Vector3();
+const focusableObjects = [];
+const activePointers = new Set();
+const activePointerPositions = new Map();
+const tapStart = {
+  pointerId: null,
+  x: 0,
+  y: 0,
+  time: 0,
+};
+const lastTap = {
+  x: 0,
+  y: 0,
+  time: -Infinity,
+};
+let pinchDistance = null;
 
 const ambient = new THREE.HemisphereLight('#9ebaff', '#10131c', 1.55);
 scene.add(ambient);
@@ -68,12 +101,15 @@ const worldGroup = new THREE.Group();
 scene.add(worldGroup);
 
 buildScene();
+setupPointerFocus();
 setInitialCameraView();
 animate();
 
 function buildScene() {
   OBJECTS.forEach((item) => {
-    worldGroup.add(createScaleObject(item));
+    const scaleObject = createScaleObject(item);
+    worldGroup.add(scaleObject);
+    focusableObjects.push(scaleObject);
   });
 
   const groundGeometry = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE);
@@ -84,6 +120,7 @@ function buildScene() {
   ground.position.set(GROUND_CENTER_X, -0.014, 0);
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
+  focusableObjects.push(ground);
 
   const grid = new THREE.GridHelper(GROUND_SIZE, GROUND_SIZE / GRID_BOX_SIZE, '#1d222b', '#1d222b');
   grid.position.set(GROUND_CENTER_X, -0.002, 0);
@@ -97,13 +134,296 @@ function buildScene() {
 }
 
 function setInitialCameraView() {
-  camera.near = 0.5;
-  camera.far = 2200;
+  camera.near = CAMERA_NEAR;
+  camera.far = CAMERA_FAR;
   camera.updateProjectionMatrix();
 
   controls.target.copy(INITIAL_CAMERA_TARGET);
   camera.position.copy(INITIAL_CAMERA_POSITION);
   controls.update();
+  controls.saveState();
+}
+
+function configureControls() {
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.055;
+  controls.enablePan = true;
+  controls.enableRotate = true;
+  controls.enableZoom = false;
+  controls.rotateSpeed = 0.62;
+  controls.panSpeed = 0.95;
+  controls.keyPanSpeed = 24;
+  controls.screenSpacePanning = true;
+  controls.zoomToCursor = false;
+  controls.minPolarAngle = Math.PI * 0.018;
+  controls.maxPolarAngle = Math.PI * 0.495;
+  controls.minDistance = MIN_CAMERA_DISTANCE;
+  controls.maxDistance = MAX_CAMERA_DISTANCE;
+  controls.minTargetRadius = 0;
+  controls.maxTargetRadius = WORLD_FOCUS_RADIUS;
+  controls.cursor.copy(WORLD_FOCUS_CENTER);
+  controls.mouseButtons = {
+    LEFT: THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN,
+  };
+  controls.touches = {
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_PAN,
+  };
+  controls.listenToKeyEvents(window);
+}
+
+function setupPointerFocus() {
+  renderer.domElement.addEventListener('wheel', onWheelDolly, { capture: true, passive: false });
+  renderer.domElement.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true });
+  renderer.domElement.addEventListener('pointermove', onPointerMove, { capture: true, passive: true });
+  renderer.domElement.addEventListener('pointerup', onPointerUp, { capture: true, passive: true });
+  renderer.domElement.addEventListener('pointercancel', onPointerCancel, { capture: true, passive: true });
+}
+
+function onWheelDolly(event) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  const deltaY = getNormalizedWheelDelta(event);
+  const scale = Math.exp(-deltaY * WHEEL_ZOOM_SPEED);
+  dollyFromScreenPoint(event.clientX, event.clientY, scale);
+}
+
+function onPointerDown(event) {
+  activePointers.add(event.pointerId);
+  activePointerPositions.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY,
+  });
+
+  if (event.pointerType === 'touch' && activePointers.size === 2) {
+    pinchDistance = getPinchDistance();
+    tapStart.pointerId = null;
+    return;
+  }
+
+  if (!event.isPrimary || activePointers.size !== 1) {
+    tapStart.pointerId = null;
+    return;
+  }
+
+  tapStart.pointerId = event.pointerId;
+  tapStart.x = event.clientX;
+  tapStart.y = event.clientY;
+  tapStart.time = window.performance.now();
+}
+
+function onPointerMove(event) {
+  if (!activePointers.has(event.pointerId)) {
+    return;
+  }
+
+  activePointerPositions.set(event.pointerId, {
+    x: event.clientX,
+    y: event.clientY,
+  });
+
+  if (event.pointerType !== 'touch' || activePointers.size < 2) {
+    return;
+  }
+
+  const nextPinch = getPinchState();
+
+  if (!nextPinch || !pinchDistance) {
+    pinchDistance = nextPinch ? nextPinch.distance : null;
+    return;
+  }
+
+  const scale = Math.pow(nextPinch.distance / pinchDistance, PINCH_ZOOM_POWER);
+  pinchDistance = nextPinch.distance;
+
+  if (Number.isFinite(scale) && scale > 0) {
+    dollyFromScreenPoint(nextPinch.centerX, nextPinch.centerY, scale);
+  }
+}
+
+function onPointerUp(event) {
+  const wasSinglePointerTap = activePointers.size === 1 && tapStart.pointerId === event.pointerId;
+  activePointers.delete(event.pointerId);
+  activePointerPositions.delete(event.pointerId);
+
+  if (activePointers.size < 2) {
+    pinchDistance = null;
+  }
+
+  if (!wasSinglePointerTap || !event.isPrimary) {
+    return;
+  }
+
+  const now = window.performance.now();
+  const movement = getScreenDistance(event.clientX, event.clientY, tapStart.x, tapStart.y);
+  const duration = now - tapStart.time;
+
+  tapStart.pointerId = null;
+
+  if (movement > TAP_FOCUS_MAX_MOVEMENT || duration > TAP_FOCUS_MAX_DURATION) {
+    return;
+  }
+
+  const delay = now - lastTap.time;
+  const tapDistance = getScreenDistance(event.clientX, event.clientY, lastTap.x, lastTap.y);
+  const isDoubleTap = delay <= DOUBLE_TAP_MAX_DELAY && tapDistance <= DOUBLE_TAP_MAX_MOVEMENT;
+
+  lastTap.x = event.clientX;
+  lastTap.y = event.clientY;
+  lastTap.time = now;
+
+  if (isDoubleTap) {
+    focusCameraAt(event.clientX, event.clientY);
+    lastTap.time = -Infinity;
+  }
+}
+
+function onPointerCancel(event) {
+  activePointers.delete(event.pointerId);
+  activePointerPositions.delete(event.pointerId);
+  tapStart.pointerId = null;
+
+  if (activePointers.size < 2) {
+    pinchDistance = null;
+  }
+}
+
+function focusCameraAt(clientX, clientY) {
+  const focusPoint = getFocusPoint(clientX, clientY);
+
+  if (!focusPoint) {
+    return;
+  }
+
+  const cameraOffset = camera.position.clone().sub(controls.target);
+  const currentDistance = cameraOffset.length();
+
+  if (currentDistance <= 0.0001) {
+    return;
+  }
+
+  const direction = cameraOffset.normalize();
+  const nextDistance = THREE.MathUtils.clamp(
+    currentDistance * FOCUS_DISTANCE_SCALE,
+    FOCUS_MIN_DISTANCE,
+    FOCUS_MAX_DISTANCE,
+  );
+
+  controls.target.copy(focusPoint);
+  controls.cursor.copy(focusPoint);
+  camera.position.copy(focusPoint).addScaledVector(direction, nextDistance);
+  controls.update();
+}
+
+function dollyFromScreenPoint(clientX, clientY, scale) {
+  if (!Number.isFinite(scale) || scale <= 0 || Math.abs(scale - 1) < 0.0001) {
+    return;
+  }
+
+  const ray = getPointerRay(clientX, clientY);
+  const hit = getFocusHit(clientX, clientY);
+  const currentDistance = hit
+    ? camera.position.distanceTo(hit.point)
+    : camera.position.distanceTo(controls.target);
+
+  if (!Number.isFinite(currentDistance) || (scale > 1 && currentDistance <= MIN_CAMERA_DISTANCE)) {
+    return;
+  }
+
+  const nextDistance = THREE.MathUtils.clamp(
+    currentDistance / scale,
+    MIN_CAMERA_DISTANCE,
+    MAX_CAMERA_DISTANCE,
+  );
+  const moveDistance = currentDistance - nextDistance;
+
+  if (Math.abs(moveDistance) < 0.00001) {
+    return;
+  }
+
+  dollyMove.copy(ray.direction).multiplyScalar(moveDistance);
+  camera.position.add(dollyMove);
+
+  const pivotDistance = getOrbitTargetDistance(hit ? hit.point : null, nextDistance);
+  camera.getWorldDirection(cameraForward);
+  controls.target.copy(camera.position).addScaledVector(cameraForward, pivotDistance);
+  controls.cursor.copy(controls.target);
+  controls.update();
+}
+
+function getOrbitTargetDistance(hitPoint, fallbackDistance) {
+  if (!hitPoint) {
+    return THREE.MathUtils.clamp(fallbackDistance, MIN_ORBIT_TARGET_DISTANCE, MAX_CAMERA_DISTANCE);
+  }
+
+  camera.getWorldDirection(cameraForward);
+  const depth = hitPoint.clone().sub(camera.position).dot(cameraForward);
+  return THREE.MathUtils.clamp(depth, MIN_ORBIT_TARGET_DISTANCE, MAX_CAMERA_DISTANCE);
+}
+
+function getPointerRay(clientX, clientY) {
+  setPointerFromClient(clientX, clientY);
+  raycaster.setFromCamera(pointer, camera);
+  pointerRay.copy(raycaster.ray);
+  return pointerRay;
+}
+
+function getFocusHit(clientX, clientY) {
+  setPointerFromClient(clientX, clientY);
+  raycaster.setFromCamera(pointer, camera);
+
+  const hits = raycaster.intersectObjects(focusableObjects, true);
+  return hits.length > 0 ? hits[0] : null;
+}
+
+function getFocusPoint(clientX, clientY) {
+  const hit = getFocusHit(clientX, clientY);
+  return hit ? hit.point : null;
+}
+
+function setPointerFromClient(clientX, clientY) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+}
+
+function getScreenDistance(x1, y1, x2, y2) {
+  return Math.hypot(x1 - x2, y1 - y2);
+}
+
+function getNormalizedWheelDelta(event) {
+  if (event.deltaMode === 1) {
+    return event.deltaY * WHEEL_LINE_HEIGHT;
+  }
+
+  if (event.deltaMode === 2) {
+    return event.deltaY * renderer.domElement.clientHeight;
+  }
+
+  return event.deltaY;
+}
+
+function getPinchState() {
+  const positions = [...activePointerPositions.values()];
+
+  if (positions.length < 2) {
+    return null;
+  }
+
+  const [first, second] = positions;
+  return {
+    centerX: (first.x + second.x) * 0.5,
+    centerY: (first.y + second.y) * 0.5,
+    distance: getScreenDistance(first.x, first.y, second.x, second.y),
+  };
+}
+
+function getPinchDistance() {
+  const pinch = getPinchState();
+  return pinch ? pinch.distance : null;
 }
 
 function createMaterial(color, opacity = 1) {
@@ -407,19 +727,15 @@ function createSoccerField(item) {
 
 function createDistancePlane(item) {
   const group = new THREE.Group();
-  const segments = 10;
-  const segmentLength = item.length / segments;
   const topY = item.height + 0.014;
 
-  for (let segment = 0; segment < segments; segment += 1) {
-    group.add(createLowPolyMesh(
-      new THREE.BoxGeometry(segmentLength, item.height, item.width),
-      segment % 2 === 0 ? item.color : '#101a29',
-      item.x + segmentLength * (segment + 0.5),
-      item.height / 2,
-      item.z,
-    ));
-  }
+  group.add(createLowPolyMesh(
+    new THREE.BoxGeometry(item.length, item.height, item.width),
+    item.color,
+    item.x + item.length / 2,
+    item.height / 2,
+    item.z,
+  ));
 
   group.add(createFieldLine(item.x + item.length / 2, item.z, item.length, 0.18, topY, '#4f8cc9'));
 
