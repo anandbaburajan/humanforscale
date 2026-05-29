@@ -1767,186 +1767,295 @@ function addWingPanelLines(group, points, side, color) {
 
 function createHumanSilhouette(item) {
   const group = new THREE.Group();
-  const shirtColor = item.color;
-  const pantsColor = '#25364c';
-  const skinColor = '#f0b98f';
-  const hairColor = '#17110d';
-  const shoeColor = '#070a10';
-  const beltColor = '#121826';
+  const topWearColor = '#00A8A9';
+  const topWearShadow = '#007f82';
+  const topWearHighlight = '#12c0c0';
+  const pantsColor = '#4738A2';
+  const pantsShadow = '#30266f';
+  const skinColor = '#b98163';
+  const hairColor = '#24150e';
+  const hairDark = '#120b08';
+  const shoeColor = '#11131c';
+  const soleColor = '#2c2d36';
   const centerX = item.x + item.length / 2;
   const centerZ = item.z;
+  const height = item.height;
+  const bodyDepth = item.length;
+  const shoulderWidth = item.width;
 
-  const footHeight = item.height * 0.085;
-  const ankleY = item.height * 0.105;
-  const kneeY = item.height * 0.32;
-  const hipY = item.height * 0.51;
-  const waistY = item.height * 0.55;
-  const shoulderY = item.height * 0.79;
-  const neckY = item.height * 0.855;
-  const headRadius = Math.min(item.length * 0.34, item.width * 0.2, item.height * 0.074);
-  const headCenterY = item.height - headRadius;
-  const limbBaseRadius = Math.min(item.length, item.width);
-  const armRadius = limbBaseRadius * 0.09;
-  const forearmRadius = limbBaseRadius * 0.075;
-  const legRadius = limbBaseRadius * 0.115;
-  const calfRadius = limbBaseRadius * 0.095;
-  const shoulderHalfWidth = item.width * 0.42;
+  // Approximate adult proportions for a 1.75 m reference figure.
+  const footHeight = height * 0.037;
+  const footLength = height * 0.154;
+  const footWidth = shoulderWidth * 0.22;
+  const soleHeight = footHeight * 0.34;
+  const ankleY = footHeight;
+  const kneeY = height * 0.305;
+  const hipY = height * 0.54;
+  const headSize = height * 0.132;
+  const hairThickness = headSize * 0.062;
+  const hairOverlap = headSize * 0.035;
+  const headCenterX = centerX + bodyDepth * 0.03;
+  const headTopY = height - hairThickness + hairOverlap;
+  const headCenterY = headTopY - headSize / 2;
+  const headBottomY = headTopY - headSize;
+  const headFaceX = headCenterX + headSize / 2;
+  const headBackX = headCenterX - headSize / 2;
+  const headLeftZ = centerZ - headSize / 2;
+  const headRightZ = centerZ + headSize / 2;
+  const panelGap = 0.003;
+  const panelDepth = 0.006;
+  const torsoTopY = headBottomY - height * 0.045;
+  const torsoBottomY = height * 0.54;
+  const torsoHeight = torsoTopY - torsoBottomY;
+  const torsoCenterY = torsoBottomY + torsoHeight / 2;
+  const torsoDepth = bodyDepth * 0.64;
+  const torsoWidth = shoulderWidth * 0.82;
+  const shoulderY = torsoTopY - height * 0.015;
+  const pelvisHeight = height * 0.085;
+  const pelvisCenterY = torsoBottomY - pelvisHeight / 2;
+  const armWidth = shoulderWidth * 0.18;
+  const armDepth = bodyDepth * 0.42;
+  const forearmWidth = shoulderWidth * 0.16;
+  const forearmDepth = bodyDepth * 0.38;
+  const thighDepth = bodyDepth * 0.42;
+  const thighWidth = shoulderWidth * 0.24;
+  const shinDepth = bodyDepth * 0.36;
+  const shinWidth = shoulderWidth * 0.2;
 
   group.add(createHumanGroundShadow(centerX, centerZ, item));
-  group.add(createEllipsoidMesh(
-    shirtColor,
+
+  group.add(createHumanCuboid(
+    topWearColor,
     centerX,
-    item.height * 0.66,
+    torsoCenterY,
     centerZ,
-    item.length * 0.36,
-    item.height * 0.215,
-    item.width * 0.36,
-    10,
-    7,
+    torsoDepth,
+    torsoHeight,
+    torsoWidth,
   ));
-  group.add(createEllipsoidMesh(
+  group.add(createHumanCuboid(
+    topWearShadow,
+    centerX - bodyDepth * 0.31,
+    torsoCenterY,
+    centerZ,
+    bodyDepth * 0.035,
+    torsoHeight * 0.94,
+    torsoWidth * 0.88,
+  ));
+  group.add(createHumanCuboid(
+    topWearHighlight,
+    centerX + bodyDepth * 0.33,
+    torsoCenterY + torsoHeight * 0.04,
+    centerZ,
+    bodyDepth * 0.025,
+    torsoHeight * 0.72,
+    torsoWidth * 0.08,
+  ));
+  group.add(createHumanCuboid(
     pantsColor,
     centerX,
-    hipY,
+    pelvisCenterY,
     centerZ,
-    item.length * 0.35,
-    item.height * 0.075,
-    item.width * 0.3,
-    9,
-    5,
+    bodyDepth * 0.66,
+    pelvisHeight,
+    shoulderWidth * 0.56,
   ));
-  group.add(createLowPolyMesh(
-    new THREE.BoxGeometry(item.length * 0.52, item.height * 0.026, item.width * 0.38),
-    beltColor,
-    centerX,
-    waistY,
+  group.add(createHumanCuboid(
+    pantsShadow,
+    centerX - bodyDepth * 0.28,
+    pelvisCenterY,
     centerZ,
+    bodyDepth * 0.04,
+    pelvisHeight * 0.88,
+    shoulderWidth * 0.48,
   ));
-  group.add(createLowPolyMesh(
-    new THREE.CylinderGeometry(item.length * 0.095, item.length * 0.11, item.height * 0.12, 8),
+
+  group.add(createHumanCuboid(
     skinColor,
     centerX,
-    neckY,
+    torsoTopY + (headBottomY - torsoTopY) / 2,
     centerZ,
+    bodyDepth * 0.26,
+    headBottomY - torsoTopY,
+    shoulderWidth * 0.25,
   ));
-  group.add(createLowPolyMesh(
-    new THREE.IcosahedronGeometry(headRadius, 2),
+
+  group.add(createHumanCuboid(
     skinColor,
-    centerX,
+    headCenterX,
     headCenterY,
     centerZ,
+    headSize,
+    headSize,
+    headSize,
   ));
-  group.add(createEllipsoidMesh(
+
+  const pixel = headSize / 8;
+  const addFrontPixel = (color, centerY, centerZValue, sizeY, sizeZ, depth = panelDepth) => {
+    group.add(createHumanCuboid(
+      color,
+      headFaceX + panelGap + depth / 2,
+      centerY,
+      centerZValue,
+      depth,
+      sizeY,
+      sizeZ,
+    ));
+  };
+  const addFrontCell = (color, row, column, rowSpan = 1, columnSpan = 1, depth = panelDepth) => {
+    addFrontPixel(
+      color,
+      headTopY - (row + rowSpan / 2) * pixel,
+      headLeftZ + (column + columnSpan / 2) * pixel,
+      rowSpan * pixel,
+      columnSpan * pixel,
+      depth,
+    );
+  };
+  const addSideHair = (color, side, centerXValue, centerYValue, sizeX, sizeY, depth = hairThickness) => {
+    group.add(createHumanCuboid(
+      color,
+      centerXValue,
+      centerYValue,
+      side > 0 ? headRightZ + depth / 2 - hairOverlap : headLeftZ - depth / 2 + hairOverlap,
+      sizeX,
+      sizeY,
+      depth,
+    ));
+  };
+
+  group.add(createHumanCuboid(
     hairColor,
-    centerX - item.length * 0.018,
-    headCenterY + headRadius * 0.44,
+    headCenterX,
+    headTopY + hairThickness / 2 - hairOverlap,
     centerZ,
-    headRadius * 0.92,
-    headRadius * 0.42,
-    headRadius * 0.94,
-    10,
-    5,
+    headSize + hairOverlap * 2,
+    hairThickness,
+    headSize + hairOverlap * 2,
   ));
+  group.add(createHumanCuboid(
+    hairColor,
+    headFaceX + hairThickness / 2 - hairOverlap,
+    height - pixel * 0.85,
+    centerZ,
+    hairThickness,
+    pixel * 1.7,
+    headSize + hairOverlap * 2,
+  ));
+  group.add(createHumanCuboid(
+    hairDark,
+    headBackX - hairThickness / 2 + hairOverlap,
+    height - (headSize + hairOverlap) / 2,
+    centerZ,
+    hairThickness,
+    headSize + hairOverlap,
+    headSize + hairOverlap * 2,
+  ));
+
   [-1, 1].forEach((side) => {
-    group.add(createLowPolyMesh(
-      new THREE.SphereGeometry(headRadius * 0.095, 6, 4),
-      '#10131a',
-      centerX + headRadius * 0.84,
-      headCenterY + headRadius * 0.07,
-      centerZ + side * headRadius * 0.32,
-    ));
+    addSideHair(hairColor, side, headCenterX, height - headSize * 0.36, headSize + hairOverlap * 2, headSize * 0.72);
+    addSideHair(hairDark, side, headCenterX - headSize * 0.31, headCenterY - headSize * 0.2, headSize * 0.3, headSize * 0.4, hairThickness * 1.08);
   });
-  group.add(createSmoothOrientedCone(
-    new THREE.Vector3(centerX + headRadius * 0.72, headCenterY - headRadius * 0.06, centerZ),
-    new THREE.Vector3(centerX + headRadius * 1.04, headCenterY - headRadius * 0.1, centerZ),
-    headRadius * 0.15,
-    skinColor,
-    7,
-  ));
+
+  addFrontCell(hairDark, 1, 2, 1, 2, panelDepth * 1.5);
+  addFrontCell(hairColor, 1, 0, 2, 1, panelDepth * 1.5);
+  addFrontCell(hairColor, 1, 7, 2, 1, panelDepth * 1.5);
+  addFrontCell(hairColor, 2, 0, 1, 1, panelDepth * 1.5);
+  addFrontCell(hairColor, 2, 7, 1, 1, panelDepth * 1.5);
 
   [-1, 1].forEach((side) => {
-    const shoulderZ = centerZ + side * shoulderHalfWidth;
-    const shoulder = new THREE.Vector3(centerX, shoulderY, shoulderZ);
-    const elbow = new THREE.Vector3(centerX + item.length * 0.015, item.height * 0.58, shoulderZ - side * item.width * 0.025);
-    const wrist = new THREE.Vector3(centerX + item.length * 0.006, item.height * 0.37, shoulderZ - side * item.width * 0.008);
-    const hip = new THREE.Vector3(centerX - item.length * 0.01, hipY, centerZ + side * item.width * 0.115);
-    const knee = new THREE.Vector3(centerX + item.length * 0.012, kneeY, centerZ + side * item.width * 0.1);
-    const ankle = new THREE.Vector3(centerX, ankleY, centerZ + side * item.width * 0.115);
+    const footCenterZ = centerZ + side * shoulderWidth * 0.18;
+    const ankle = new THREE.Vector3(centerX + bodyDepth * 0.02, ankleY, footCenterZ);
+    const knee = new THREE.Vector3(centerX, kneeY, centerZ + side * shoulderWidth * 0.15);
+    const hip = new THREE.Vector3(centerX - bodyDepth * 0.02, hipY, centerZ + side * shoulderWidth * 0.14);
+    const shoulder = new THREE.Vector3(centerX + bodyDepth * 0.01, shoulderY, centerZ + side * (shoulderWidth / 2 - armWidth / 2));
+    const elbow = new THREE.Vector3(centerX + bodyDepth * 0.02, height * 0.635, centerZ + side * (shoulderWidth / 2 - armWidth / 2));
+    const wrist = new THREE.Vector3(centerX + bodyDepth * 0.065, height * 0.455, centerZ + side * (shoulderWidth / 2 - forearmWidth / 2));
+    const footAngle = 0;
 
-    group.add(createLowPolyMesh(
-      new THREE.SphereGeometry(armRadius * 1.25, 8, 5),
-      shirtColor,
-      shoulder.x,
-      shoulder.y,
-      shoulder.z,
-    ));
-    group.add(createLimb(
-      shoulder,
-      elbow,
-      armRadius,
-      shirtColor,
-    ));
-    group.add(createLowPolyMesh(
-      new THREE.SphereGeometry(armRadius * 1.08, 8, 5),
-      shirtColor,
-      elbow.x,
-      elbow.y,
-      elbow.z,
-    ));
-    group.add(createLimb(
-      elbow,
-      wrist,
-      forearmRadius,
-      skinColor,
-    ));
-    group.add(createLowPolyMesh(
-      new THREE.SphereGeometry(forearmRadius * 1.45, 8, 5),
-      skinColor,
-      wrist.x,
-      wrist.y - forearmRadius * 0.35,
-      wrist.z,
-    ));
-    group.add(createLimb(
-      hip,
-      knee,
-      legRadius,
-      pantsColor,
-    ));
-    group.add(createLowPolyMesh(
-      new THREE.SphereGeometry(legRadius * 1.08, 8, 5),
-      pantsColor,
+    group.add(createHumanCuboidBetween(hip, knee, thighDepth, thighWidth, pantsColor));
+    group.add(createHumanCuboid(
+      pantsShadow,
       knee.x,
       knee.y,
       knee.z,
+      thighDepth * 0.88,
+      height * 0.035,
+      thighWidth * 0.94,
     ));
-    group.add(createLimb(
-      knee,
-      ankle,
-      calfRadius,
-      pantsColor,
-    ));
-    group.add(createLowPolyMesh(
-      new THREE.SphereGeometry(calfRadius * 1.18, 8, 5),
-      pantsColor,
+    group.add(createHumanCuboidBetween(knee, ankle, shinDepth, shinWidth, pantsColor));
+    group.add(createHumanCuboid(
+      pantsShadow,
       ankle.x,
       ankle.y,
       ankle.z,
+      shinDepth * 0.9,
+      height * 0.026,
+      shinWidth,
     ));
-    group.add(createLowPolyMesh(
-      new THREE.BoxGeometry(item.length * 0.54, footHeight, item.width * 0.16),
+
+    const sole = createHumanCuboid(
+      soleColor,
+      centerX,
+      soleHeight / 2,
+      footCenterZ,
+      footLength,
+      soleHeight,
+      footWidth,
+    );
+    sole.rotation.y = footAngle;
+    group.add(sole);
+
+    const shoe = createHumanCuboid(
       shoeColor,
-      centerX + item.length * 0.08,
-      footHeight / 2,
-      centerZ + side * item.width * 0.13,
+      centerX,
+      soleHeight + (footHeight - soleHeight) / 2,
+      footCenterZ,
+      footLength * 0.92,
+      footHeight - soleHeight,
+      footWidth * 0.92,
+    );
+    shoe.rotation.y = footAngle;
+    group.add(shoe);
+
+    group.add(createHumanCuboidBetween(shoulder, elbow, armDepth, armWidth, topWearColor));
+    group.add(createHumanCuboid(
+      topWearShadow,
+      elbow.x,
+      elbow.y,
+      elbow.z,
+      armDepth * 0.92,
+      height * 0.028,
+      armWidth,
     ));
+    group.add(createHumanCuboidBetween(elbow, wrist, forearmDepth, forearmWidth, skinColor));
   });
 
   return group;
 }
 
+function createHumanCuboid(color, x, y, z, sizeX, sizeY, sizeZ) {
+  return createLowPolyMesh(
+    new THREE.BoxGeometry(sizeX, sizeY, sizeZ),
+    color,
+    x,
+    y,
+    z,
+  );
+}
+
+function createHumanCuboidBetween(start, end, sizeX, sizeZ, color) {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  const cuboid = createHumanCuboid(color, 0, 0, 0, sizeX, length, sizeZ);
+  cuboid.position.copy(start).add(end).multiplyScalar(0.5);
+  cuboid.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  return cuboid;
+}
+
 function createHumanGroundShadow(centerX, centerZ, item) {
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 18),
+    new THREE.BoxGeometry(item.length * 1.75, 0.01, item.width * 1.05),
     new THREE.MeshBasicMaterial({
       color: '#02040a',
       transparent: true,
@@ -1955,8 +2064,6 @@ function createHumanGroundShadow(centerX, centerZ, item) {
     }),
   );
   shadow.position.set(centerX, 0.006, centerZ);
-  shadow.rotation.x = -Math.PI / 2;
-  shadow.scale.set(item.length * 1.75, item.width * 1.05, 1);
   return shadow;
 }
 
@@ -1988,8 +2095,9 @@ function createCarSilhouette(item) {
   [item.x + item.length * 0.22, item.x + item.length * 0.77].forEach((x) => {
     [-1, 1].forEach((side) => {
       const z = item.z + side * (item.width / 2 - wheelDepth / 2);
+      const hubZ = item.z + side * (item.width / 2 + hubDepth / 2 + 0.012);
       group.add(createWheel(x, wheelRadius, z, wheelRadius, wheelDepth, wheelColor));
-      group.add(createWheel(x, wheelRadius, item.z + side * (item.width / 2 - hubDepth / 2), wheelRadius * 0.42, hubDepth, hubColor));
+      group.add(createWheel(x, wheelRadius, hubZ, wheelRadius * 0.42, hubDepth, hubColor));
       group.add(createWheelArch(x, wheelRadius, item.z + side * (bodyWidth / 2 + 0.012), wheelRadius * 1.15, side, bodyAccent));
     });
   });
