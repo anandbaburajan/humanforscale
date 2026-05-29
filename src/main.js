@@ -8,7 +8,7 @@ const OBJECTS = [
   { name: '100 m', shape: 'track', length: 100, lanes: 4, laneWidth: 1.22, height: 0.32, color: '#b9573f', x: 0, z: -8 },
   { name: '1 km', shape: 'distancePlane', length: 1000, width: 18, height: 0.32, color: '#172335', x: 0, z: -112 },
   { name: '1 mile', shape: 'distancePlane', length: 1609.344, width: 18, height: 0.32, color: '#1b2b43', x: 0, z: -136 },
-  { name: 'Boeing 737', shape: 'boeing737', length: 39.5, width: 35.8, height: 12.5, fuselageDiameter: 3.76, color: '#d8e0ea', x: 0, z: -180 },
+  { name: 'Boeing 737', shape: 'boeing737', length: 39.5, width: 35.8, height: 12.5, fuselageDiameter: 3.76, color: '#f6f8fb', x: 0, z: -180 },
   { name: 'Blue whale', shape: 'blueWhale', length: 29.9, width: 5.2, height: 4.2, color: '#416d92', x: 0, z: -220 },
   {
     name: 'Eiffel Tower',
@@ -1346,112 +1346,370 @@ function createBoeing737(item) {
   const group = new THREE.Group();
   const fuselageRadius = item.fuselageDiameter / 2;
   const fuselageY = fuselageRadius + item.height * 0.08;
+  const halfSpan = item.width / 2;
+  const noseX = item.x;
+  const tailX = item.x + item.length;
+  const wingRootY = fuselageY - fuselageRadius * 0.3;
+  const tailplaneY = fuselageY + fuselageRadius * 0.5;
   const bodyColor = item.color;
-  const bellyColor = '#aeb7c4';
-  const wingColor = '#c3ccd8';
-  const tailColor = '#3e73a9';
-  const noseTip = new THREE.Vector3(item.x, fuselageY, item.z);
-  const noseBase = new THREE.Vector3(item.x + item.length * 0.11, fuselageY, item.z);
-  const bodyEnd = new THREE.Vector3(item.x + item.length * 0.84, fuselageY, item.z);
-  const tailEnd = new THREE.Vector3(item.x + item.length * 0.97, fuselageY + fuselageRadius * 0.12, item.z);
+  const bellyColor = '#123a73';
+  const navy = '#123a73';
+  const red = '#de2638';
+  const wingColor = '#d9e0e9';
+  const wingAccent = '#aeb8c6';
+  const glassColor = '#09111e';
+  const metalColor = '#aeb8c6';
 
-  group.add(createOrientedCone(noseBase, noseTip, fuselageRadius, bodyColor, 12));
-  group.add(createOrientedCylinder(noseBase, bodyEnd, fuselageRadius, fuselageRadius * 0.94, bodyColor, 14));
-  group.add(createOrientedCylinder(bodyEnd, tailEnd, fuselageRadius * 0.94, fuselageRadius * 0.32, bodyColor, 10));
-  group.add(createOrientedCylinder(
-    new THREE.Vector3(item.x + item.length * 0.16, fuselageY - fuselageRadius * 0.64, item.z),
-    new THREE.Vector3(item.x + item.length * 0.76, fuselageY - fuselageRadius * 0.64, item.z),
-    fuselageRadius * 0.2,
-    fuselageRadius * 0.16,
-    bellyColor,
-    8,
-  ));
+  const fuselageSections = [
+    { x: noseX, radius: fuselageRadius * 0.14, y: fuselageY - fuselageRadius * 0.16 },
+    { x: item.x + item.length * 0.014, radius: fuselageRadius * 0.42, y: fuselageY - fuselageRadius * 0.1 },
+    { x: item.x + item.length * 0.038, radius: fuselageRadius * 0.7, y: fuselageY - fuselageRadius * 0.04 },
+    { x: item.x + item.length * 0.072, radius: fuselageRadius * 0.9, y: fuselageY },
+    { x: item.x + item.length * 0.105, radius: fuselageRadius * 0.98, y: fuselageY },
+    { x: item.x + item.length * 0.13, radius: fuselageRadius, y: fuselageY },
+    { x: item.x + item.length * 0.75, radius: fuselageRadius, y: fuselageY },
+    { x: item.x + item.length * 0.86, radius: fuselageRadius * 0.72, y: fuselageY + fuselageRadius * 0.08 },
+    { x: item.x + item.length * 0.955, radius: fuselageRadius * 0.3, y: fuselageY + fuselageRadius * 0.18 },
+    { x: tailX, radius: fuselageRadius * 0.11, y: fuselageY + fuselageRadius * 0.22 },
+  ];
+
+  group.add(createFuselageSurface(fuselageSections, item.z, 345, 555, bodyColor));
+  group.add(createFuselageSurface(fuselageSections.slice(0, 4), item.z, 195, 345, bodyColor));
+  group.add(createFuselageSurface(fuselageSections.slice(3), item.z, 195, 345, bellyColor));
+  group.add(createFuselageNoseCap(fuselageSections[0], item.z, bodyColor));
 
   [-1, 1].forEach((side) => {
-    const innerZ = item.z + side * fuselageRadius * 0.55;
-    const outerZ = item.z + side * item.width / 2;
+    const outerZ = item.z + side * halfSpan;
+    const rootZ = item.z + side * fuselageRadius * 0.82;
+    const tipY = wingRootY + 1.12;
+    const wingRootChordScale = 0.8;
+    const wingTipChordScale = 0.6;
+    const wingRootCenterX = item.x + item.length * 0.52;
+    const wingTipCenterX = item.x + item.length * 0.6125;
+    const wingRootChord = item.length * 0.21 * wingRootChordScale;
+    const wingTipChord = item.length * 0.125 * wingTipChordScale;
+    const wingRootTrailingX = wingRootCenterX + wingRootChord / 2;
+    const wingRootLeadingX = wingRootCenterX - wingRootChord / 2;
+    const wingTipTrailingX = wingTipCenterX + wingTipChord / 2;
+    const wingTipLeadingX = wingTipCenterX - wingTipChord / 2;
     const wingPoints = side > 0
       ? [
-          [item.x + item.length * 0.43, innerZ],
-          [item.x + item.length * 0.56, item.z + side * fuselageRadius * 0.68],
-          [item.x + item.length * 0.63, outerZ],
-          [item.x + item.length * 0.52, outerZ],
+          [wingRootLeadingX, wingRootY, rootZ],
+          [wingRootTrailingX, wingRootY - 0.05, rootZ],
+          [wingTipTrailingX, tipY, outerZ],
+          [wingTipLeadingX, tipY + 0.04, outerZ],
         ]
       : [
-          [item.x + item.length * 0.43, innerZ],
-          [item.x + item.length * 0.52, outerZ],
-          [item.x + item.length * 0.63, outerZ],
-          [item.x + item.length * 0.56, item.z + side * fuselageRadius * 0.68],
+          [wingRootLeadingX, wingRootY, rootZ],
+          [wingRootTrailingX, wingRootY - 0.05, rootZ],
+          [wingTipTrailingX, tipY, outerZ],
+          [wingTipLeadingX, tipY + 0.04, outerZ],
         ];
-    group.add(createPrismFromXZ(wingPoints, fuselageY - fuselageRadius * 0.08, 0.28, wingColor));
 
-    const stabilizerPoints = side > 0
-      ? [
-          [item.x + item.length * 0.82, item.z + side * fuselageRadius * 0.45],
-          [item.x + item.length * 0.96, item.z + side * item.width * 0.22],
-          [item.x + item.length * 0.88, item.z + side * item.width * 0.24],
-        ]
-      : [
-          [item.x + item.length * 0.82, item.z + side * fuselageRadius * 0.45],
-          [item.x + item.length * 0.88, item.z + side * item.width * 0.24],
-          [item.x + item.length * 0.96, item.z + side * item.width * 0.22],
-        ];
-    group.add(createPrismFromXZ(stabilizerPoints, fuselageY + fuselageRadius * 1.08, 0.22, wingColor));
+    group.add(createVariablePrism(wingPoints, 0.32, wingColor));
+    addWingPanelLines(group, wingPoints, side, wingAccent);
 
-    const engineStart = new THREE.Vector3(item.x + item.length * 0.48, fuselageY - fuselageRadius * 1.06, item.z + side * item.width * 0.22);
-    const engineEnd = new THREE.Vector3(item.x + item.length * 0.57, fuselageY - fuselageRadius * 1.06, item.z + side * item.width * 0.22);
-    group.add(createOrientedCylinder(engineStart, engineEnd, 0.82, 0.72, '#8793a3', 10));
-    group.add(createOrientedCylinder(engineStart, engineStart.clone().add(new THREE.Vector3(0.12, 0, 0)), 0.66, 0.62, '#07101a', 10));
+    const wingletThickness = 0.36;
+    const wingletZ = item.z + side * (halfSpan - wingletThickness / 2);
+    const wingletChordX = wingTipTrailingX - wingTipLeadingX;
+    group.add(createPrismFromXY([
+      [wingTipLeadingX + wingletChordX * 0.016, tipY],
+      [wingTipTrailingX, tipY - 0.02],
+      [wingTipLeadingX + wingletChordX * 0.928, tipY + 1.54],
+      [wingTipLeadingX + wingletChordX * 0.2, tipY + 1.78],
+    ], wingletZ, wingletThickness, navy));
 
-    const mainWheelZ = item.z + side * 1.15;
-    group.add(createWheel(item.x + item.length * 0.53, 0.42, mainWheelZ, 0.42, 0.24, '#090c12'));
-    group.add(createLimb(
-      new THREE.Vector3(item.x + item.length * 0.53, fuselageY - fuselageRadius * 0.92, mainWheelZ),
-      new THREE.Vector3(item.x + item.length * 0.53, 0.82, mainWheelZ),
-      0.055,
-      '#9aa5b2',
-    ));
+    const stabilizerOuterZ = item.z + side * (item.width * 0.2);
+    const stabilizerRootZ = item.z + side * fuselageRadius * 0.94;
+    const stabilizerRootTrailingX = item.x + item.length * 0.955;
+    const stabilizerTipTrailingX = item.x + item.length * 0.972;
+    const stabilizerRootChord = item.length * 0.119;
+    const stabilizerTipChord = stabilizerRootChord * 0.5;
+    const stabilizerPoints = [
+      [stabilizerRootTrailingX - stabilizerRootChord, tailplaneY, stabilizerRootZ],
+      [stabilizerRootTrailingX, tailplaneY - 0.04, stabilizerRootZ],
+      [stabilizerTipTrailingX, tailplaneY + 0.18, stabilizerOuterZ],
+      [stabilizerTipTrailingX - stabilizerTipChord, tailplaneY + 0.32, stabilizerOuterZ],
+    ];
+    group.add(createVariablePrism(stabilizerPoints, 0.12, wingColor));
+
+    addBoeingEngine(group, item, side, fuselageY, fuselageRadius, wingRootY, navy, metalColor, glassColor);
+    addMainLandingGear(group, item, side, fuselageY, fuselageRadius, metalColor, glassColor);
   });
 
-  group.add(createPrismFromXY([
-    [item.x + item.length * 0.82, fuselageY + fuselageRadius * 0.6],
-    [item.x + item.length * 0.91, item.height],
-    [item.x + item.length * 0.98, fuselageY + fuselageRadius * 0.86],
-  ], item.z, 0.58, tailColor));
+  addVerticalTail(group, item, fuselageY, fuselageRadius, navy, red);
+  addBoeingWindowsAndDoors(group, item, fuselageY, fuselageRadius, glassColor, metalColor);
+  addNoseLandingGear(group, item, fuselageY, fuselageRadius, metalColor, glassColor);
+  group.add(createHumanAt(item.x + item.length * 0.16, item.z + halfSpan + 1.7, '#51e4d4'));
 
-  for (let windowIndex = 0; windowIndex < 13; windowIndex += 1) {
-    const windowX = item.x + item.length * (0.19 + windowIndex * 0.045);
+  return group;
+}
+
+function addBoeingEngine(group, item, side, fuselageY, fuselageRadius, wingRootY, navy, metalColor, glassColor) {
+  const engineRadius = fuselageRadius * 0.52;
+  const engineLength = item.length * 0.074;
+  const engineFrontX = item.x + item.length * 0.43;
+  const engineBackX = engineFrontX + engineLength;
+  const engineY = Math.max(engineRadius + 0.34, fuselageY - fuselageRadius * 0.83);
+  const engineZ = item.z + side * item.width * 0.16;
+  const front = new THREE.Vector3(engineFrontX, engineY, engineZ);
+  const back = new THREE.Vector3(engineBackX, engineY + 0.04, engineZ);
+
+  group.add(createSmoothOrientedCylinder(front, back, engineRadius, engineRadius * 0.9, navy, 24));
+  group.add(createSmoothOrientedCylinder(
+    front.clone().add(new THREE.Vector3(-0.03, 0, 0)),
+    front.clone().add(new THREE.Vector3(0.22, 0, 0)),
+    engineRadius * 1.02,
+    engineRadius * 0.95,
+    metalColor,
+    24,
+  ));
+  group.add(createSmoothOrientedCylinder(
+    front.clone().add(new THREE.Vector3(-0.05, 0, 0)),
+    front.clone().add(new THREE.Vector3(0.06, 0, 0)),
+    engineRadius * 0.72,
+    engineRadius * 0.67,
+    glassColor,
+    20,
+  ));
+  group.add(createSmoothOrientedCone(
+    front.clone().add(new THREE.Vector3(0.1, 0, 0)),
+    front.clone().add(new THREE.Vector3(-0.16, 0, 0)),
+    engineRadius * 0.22,
+    '#d7dde6',
+    18,
+  ));
+  group.add(createTaperedPrism(
+    engineFrontX + engineLength * 0.48,
+    (wingRootY + engineY + engineRadius * 0.7) / 2,
+    engineZ,
+    0.68,
+    0.42,
+    0.36,
+    0.2,
+    Math.max(0.32, wingRootY - (engineY + engineRadius * 0.28)),
+    metalColor,
+  ));
+}
+
+function addMainLandingGear(group, item, side, fuselageY, fuselageRadius, metalColor, tireColor) {
+  const gearX = item.x + item.length * 0.535;
+  const strutTop = new THREE.Vector3(gearX, fuselageY - fuselageRadius * 0.78, item.z + side * 0.72);
+  const strutBase = new THREE.Vector3(gearX, 0.88, item.z + side * 1.28);
+  const wheelRadius = 0.43;
+  const wheelDepth = 0.18;
+
+  group.add(createLimb(strutTop, strutBase, 0.06, metalColor));
+  group.add(createLimb(
+    strutBase,
+    new THREE.Vector3(gearX + 0.34, 0.42, item.z + side * 1.48),
+    0.038,
+    metalColor,
+  ));
+
+  [1.18, 1.48].forEach((offset) => {
+    group.add(createWheel(gearX + 0.06, wheelRadius, item.z + side * offset, wheelRadius, wheelDepth, tireColor));
+    group.add(createWheel(gearX + 0.06, wheelRadius, item.z + side * offset, wheelRadius * 0.45, wheelDepth * 1.08, '#c7d0dc'));
+  });
+}
+
+function addNoseLandingGear(group, item, fuselageY, fuselageRadius, metalColor, tireColor) {
+  const gearX = item.x + item.length * 0.175;
+  const wheelRadius = 0.32;
+  const wheelDepth = 0.12;
+
+  group.add(createLimb(
+    new THREE.Vector3(gearX, fuselageY - fuselageRadius * 0.82, item.z),
+    new THREE.Vector3(gearX, 0.62, item.z),
+    0.052,
+    metalColor,
+  ));
+  [-1, 1].forEach((side) => {
+    group.add(createWheel(gearX, wheelRadius, item.z + side * 0.16, wheelRadius, wheelDepth, tireColor));
+    group.add(createWheel(gearX, wheelRadius, item.z + side * 0.16, wheelRadius * 0.42, wheelDepth * 1.08, '#c7d0dc'));
+  });
+}
+
+function addVerticalTail(group, item, fuselageY, fuselageRadius, navy, red) {
+  const finThickness = 0.5;
+  const rootY = fuselageY + fuselageRadius * 0.52;
+  const finPoints = [
+    [item.x + item.length * 0.805, rootY],
+    [item.x + item.length * 0.875, item.height],
+    [item.x + item.length * 0.966, item.height - 0.48],
+    [item.x + item.length * 0.982, rootY + 1.28],
+  ];
+
+  group.add(createPrismFromXY(finPoints, item.z, finThickness, navy));
+
+  [-1, 1].forEach((side) => {
+    const z = item.z + side * (finThickness / 2 + 0.07);
+    group.add(createFlatPolygonFromXY([
+      [item.x + item.length * 0.825, rootY + 0.96],
+      [item.x + item.length * 0.954, rootY + 0.72],
+      [item.x + item.length * 0.963, rootY + 2.48],
+      [item.x + item.length * 0.878, rootY + 3.28],
+      [item.x + item.length * 0.835, rootY + 2.18],
+    ], z, red));
+    group.add(createFlatPolygonFromXY([
+      [item.x + item.length * 0.885, rootY + 3.18],
+      [item.x + item.length * 0.95, rootY + 2.55],
+      [item.x + item.length * 0.964, rootY + 3.52],
+      [item.x + item.length * 0.91, rootY + 4.18],
+    ], z, red));
+  });
+}
+
+function addBoeingWindowsAndDoors(group, item, fuselageY, fuselageRadius, glassColor, metalColor) {
+  const windowY = fuselageY + fuselageRadius * 0.45;
+  const firstWindowX = item.x + item.length * 0.19;
+  const lastWindowX = item.x + item.length * 0.78;
+  const windowCount = 29;
+  const passengerWindowWidth = 0.18;
+  const passengerWindowHeight = 0.32;
+  const passengerWindowRadius = 0.055;
+
+  for (let windowIndex = 0; windowIndex < windowCount; windowIndex += 1) {
+    const t = windowIndex / (windowCount - 1);
+    const windowX = firstWindowX + (lastWindowX - firstWindowX) * t;
+    if (Math.abs(windowX - (item.x + item.length * 0.47)) < 0.32) {
+      continue;
+    }
+
     [-1, 1].forEach((side) => {
-      group.add(createLowPolyMesh(
-        new THREE.BoxGeometry(0.42, 0.22, 0.035),
-        '#0d1724',
+      const windowZ = getFuselageSidePanelZ(
+        item.z,
+        side,
+        fuselageRadius,
+        fuselageY,
+        windowY - passengerWindowHeight / 2,
+        0.035,
+      );
+      group.add(createRoundedRectPanel(
+        passengerWindowWidth,
+        passengerWindowHeight,
+        passengerWindowRadius,
+        glassColor,
         windowX,
-        fuselageY + fuselageRadius * 0.38,
-        item.z + side * (fuselageRadius + 0.025),
+        windowY,
+        windowZ,
       ));
     });
   }
 
   [-1, 1].forEach((side) => {
-    group.add(createLowPolyMesh(
-      new THREE.BoxGeometry(0.58, 0.28, 0.04),
-      '#0d1724',
-      item.x + item.length * 0.08,
-      fuselageY + fuselageRadius * 0.45,
-      item.z + side * (fuselageRadius + 0.03),
-    ));
+    addAircraftDoor(group, item.x + item.length * 0.145, fuselageY + fuselageRadius * 0.05, item.z, side, fuselageRadius, 0.76, 1.72, metalColor);
+    addAircraftDoor(group, item.x + item.length * 0.83, fuselageY + fuselageRadius * 0.04, item.z, side, fuselageRadius * 0.82, 0.68, 1.55, metalColor);
+    addAircraftDoor(group, item.x + item.length * 0.475, fuselageY + fuselageRadius * 0.05, item.z, side, fuselageRadius, 0.58, 1.08, metalColor);
+    addAircraftDoor(group, item.x + item.length * 0.53, fuselageY + fuselageRadius * 0.05, item.z, side, fuselageRadius, 0.58, 1.08, metalColor);
   });
+}
 
-  group.add(createWheel(item.x + item.length * 0.18, 0.33, item.z, 0.33, 0.22, '#090c12'));
-  group.add(createLimb(
-    new THREE.Vector3(item.x + item.length * 0.18, fuselageY - fuselageRadius * 0.86, item.z),
-    new THREE.Vector3(item.x + item.length * 0.18, 0.65, item.z),
-    0.052,
-    '#9aa5b2',
+function addAircraftDoor(group, centerX, centerY, centerZ, side, radius, width, height, color) {
+  const rail = 0.045;
+  const topY = centerY + height / 2;
+  const bottomY = centerY - height / 2;
+
+  group.add(createFlatPanel(
+    width,
+    rail,
+    color,
+    centerX,
+    topY,
+    getFuselageSidePanelZ(centerZ, side, radius, centerY, topY),
   ));
-  group.add(createHumanAt(item.x + item.length * 0.16, item.z + item.width / 2 + 1.7, '#51e4d4'));
+  group.add(createFlatPanel(
+    width,
+    rail,
+    color,
+    centerX,
+    bottomY,
+    getFuselageSidePanelZ(centerZ, side, radius, centerY, bottomY),
+  ));
+  addCurvedVerticalPanelRail(group, centerX - width / 2, centerY, centerZ, side, radius, height, rail, color);
+  addCurvedVerticalPanelRail(group, centerX + width / 2, centerY, centerZ, side, radius, height, rail, color);
+}
 
-  return group;
+function addCurvedVerticalPanelRail(group, x, centerY, centerZ, side, radius, height, width, color) {
+  const segmentCount = 8;
+  const segmentHeight = height / segmentCount;
+
+  for (let index = 0; index < segmentCount; index += 1) {
+    const y = centerY - height / 2 + segmentHeight * (index + 0.5);
+    group.add(createFlatPanel(
+      width,
+      segmentHeight * 0.96,
+      color,
+      x,
+      y,
+      getFuselageSidePanelZ(centerZ, side, radius, centerY, y),
+    ));
+  }
+}
+
+function createRoundedRectPanel(width, height, radius, color, x, y, z) {
+  const shape = new THREE.Shape();
+  const left = -width / 2;
+  const right = width / 2;
+  const top = height / 2;
+  const bottom = -height / 2;
+  const r = Math.min(radius, width / 2, height / 2);
+
+  shape.moveTo(left + r, top);
+  shape.lineTo(right - r, top);
+  shape.quadraticCurveTo(right, top, right, top - r);
+  shape.lineTo(right, bottom + r);
+  shape.quadraticCurveTo(right, bottom, right - r, bottom);
+  shape.lineTo(left + r, bottom);
+  shape.quadraticCurveTo(left, bottom, left, bottom + r);
+  shape.lineTo(left, top - r);
+  shape.quadraticCurveTo(left, top, left + r, top);
+
+  const geometry = new THREE.ShapeGeometry(shape, 6);
+  const material = createLowPolyMaterial(color);
+  material.side = THREE.DoubleSide;
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -1;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  return mesh;
+}
+
+function createFlatPanel(width, height, color, x, y, z) {
+  const geometry = new THREE.PlaneGeometry(width, height);
+  const material = createLowPolyMaterial(color);
+  material.side = THREE.DoubleSide;
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -1;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(x, y, z);
+  return mesh;
+}
+
+function getFuselageSidePanelZ(centerZ, side, radius, centerY, panelY, surfaceGap = 0.012) {
+  const dy = THREE.MathUtils.clamp(panelY - centerY, -radius * 0.98, radius * 0.98);
+  return centerZ + side * (Math.sqrt(radius ** 2 - dy ** 2) + surfaceGap);
+}
+
+function getFuselageTopPanelY(centerZ, centerY, radius, panelZ, surfaceGap = 0.012) {
+  const dz = THREE.MathUtils.clamp(panelZ - centerZ, -radius * 0.98, radius * 0.98);
+  return centerY + Math.sqrt(radius ** 2 - dz ** 2) + surfaceGap;
+}
+
+function addWingPanelLines(group, points, side, color) {
+  const topOffset = 0.2;
+  const rootLeading = new THREE.Vector3(points[0][0], points[0][1] + topOffset, points[0][2]);
+  const rootTrailing = new THREE.Vector3(points[1][0], points[1][1] + topOffset, points[1][2]);
+  const tipTrailing = new THREE.Vector3(points[2][0], points[2][1] + topOffset, points[2][2]);
+  const tipLeading = new THREE.Vector3(points[3][0], points[3][1] + topOffset, points[3][2]);
+  const leadingInset = rootLeading.clone().lerp(tipLeading, 0.55);
+  const trailingInset = rootTrailing.clone().lerp(tipTrailing, 0.55);
+
+  group.add(createLimb(rootLeading.clone().lerp(rootTrailing, 0.48), leadingInset, 0.018, color));
+  group.add(createLimb(rootLeading.clone().lerp(tipLeading, 0.66), rootTrailing.clone().lerp(tipTrailing, 0.66), 0.014, color));
+  group.add(createLimb(trailingInset, tipTrailing.clone().lerp(tipLeading, side > 0 ? 0.35 : 0.65), 0.014, color));
 }
 
 function createHumanSilhouette(item) {
@@ -1645,6 +1903,107 @@ function createHumanAt(centerX, centerZ, color, baseY = 0) {
   });
   human.position.y = baseY;
   return human;
+}
+
+function createSmoothOrientedCylinder(start, end, startRadius, endRadius, color, radialSegments = 20) {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  const geometry = new THREE.CylinderGeometry(endRadius, startRadius, length, radialSegments, 1);
+  geometry.computeVertexNormals();
+  const mesh = new THREE.Mesh(geometry, createMaterial(color));
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  return mesh;
+}
+
+function createSmoothOrientedCone(base, tip, radius, color, radialSegments = 18) {
+  const direction = new THREE.Vector3().subVectors(tip, base);
+  const length = direction.length();
+  const geometry = new THREE.ConeGeometry(radius, length, radialSegments, 1);
+  geometry.computeVertexNormals();
+  const mesh = new THREE.Mesh(geometry, createMaterial(color));
+  mesh.position.copy(base).add(tip).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  return mesh;
+}
+
+function createFuselageSurface(sections, centerZ, startAngleDegrees, endAngleDegrees, color) {
+  const radialSegments = 28;
+  const radiusOffset = 1;
+  const startAngle = THREE.MathUtils.degToRad(startAngleDegrees);
+  const endAngle = THREE.MathUtils.degToRad(endAngleDegrees);
+  const positions = [];
+  const indices = [];
+
+  sections.forEach((section) => {
+    for (let step = 0; step <= radialSegments; step += 1) {
+      const t = step / radialSegments;
+      const angle = startAngle + (endAngle - startAngle) * t;
+      positions.push(
+        section.x,
+        section.y + Math.sin(angle) * section.radius * radiusOffset,
+        centerZ + Math.cos(angle) * section.radius * radiusOffset,
+      );
+    }
+  });
+
+  const rowLength = radialSegments + 1;
+  for (let sectionIndex = 0; sectionIndex < sections.length - 1; sectionIndex += 1) {
+    for (let step = 0; step < radialSegments; step += 1) {
+      const a = sectionIndex * rowLength + step;
+      const b = a + 1;
+      const c = a + rowLength;
+      const d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const material = createMaterial(color);
+  material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
+}
+
+function createFuselageNoseCap(section, centerZ, color) {
+  const geometry = new THREE.CircleGeometry(section.radius, 28);
+  geometry.rotateY(Math.PI / 2);
+  geometry.translate(section.x, section.y, centerZ);
+  geometry.computeVertexNormals();
+  const material = createMaterial(color);
+  material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
+}
+
+function createVariablePrism(points, thickness, color) {
+  const halfThickness = thickness / 2;
+  const positions = [
+    ...points.flatMap(([x, y, z]) => [x, y - halfThickness, z]),
+    ...points.flatMap(([x, y, z]) => [x, y + halfThickness, z]),
+  ];
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(createPrismIndices(points.length));
+  geometry.computeVertexNormals();
+  const material = createMaterial(color);
+  material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
+}
+
+function createFlatPolygonFromXY(points, z, color) {
+  const geometry = new THREE.BufferGeometry();
+  const indices = [];
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap(([x, y]) => [x, y, z]), 3));
+  for (let index = 1; index < points.length - 1; index += 1) {
+    indices.push(0, index, index + 1);
+  }
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const material = createLowPolyMaterial(color);
+  material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
 }
 
 function createEllipsoidMesh(color, x, y, z, scaleX, scaleY, scaleZ, widthSegments = 12, heightSegments = 6) {
