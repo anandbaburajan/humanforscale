@@ -28,7 +28,7 @@ const OBJECTS = [
 ];
 const CUSTOM_OBJECT_COLOR = '#cfcfcf';
 const CUSTOM_OBJECT_ROW_GAP = 8;
-const GROUND_SIZE = 1900;
+const GROUND_SIZE = 6000;
 const GROUND_CENTER_X = 800;
 const GRID_BOX_SIZE = 10;
 const LABEL_GAP = 1.2;
