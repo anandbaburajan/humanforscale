@@ -1,7 +1,7 @@
 # HumanForScale
 
-A dark themed Three.js visualizer showing three exact-scale cuboids: a human,
-a car, and 100 meters.
+A dark themed Three.js visualizer showing exact-scale low-poly references:
+a car, Boeing 737, blue whale, soccer field, 100 meters, 1 km, and 1 mile.
 
 ## Development
 

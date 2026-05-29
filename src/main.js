@@ -4,10 +4,16 @@ import './styles.css';
 
 const OBJECTS = [
   { name: 'Car', shape: 'car', length: 5.021, width: 1.987, height: 1.43, color: '#ffb45f', x: 0, z: 0, scaleHuman: true },
-  { name: '100 m', shape: 'track', length: 100, lanes: 4, laneWidth: 1.22, height: 0.18, color: '#b9573f', x: 0, z: -8 },
+  { name: 'Soccer field', shape: 'soccerField', length: 105, width: 68, height: 0.32, color: '#28733f', x: 0, z: -55 },
+  { name: '100 m', shape: 'track', length: 100, lanes: 4, laneWidth: 1.22, height: 0.32, color: '#b9573f', x: 0, z: -8 },
+  { name: '1 km', shape: 'distancePlane', length: 1000, width: 18, height: 0.32, color: '#172335', x: 0, z: -112 },
+  { name: '1 mile', shape: 'distancePlane', length: 1609.344, width: 18, height: 0.32, color: '#1b2b43', x: 0, z: -136 },
+  { name: 'Boeing 737', shape: 'boeing737', length: 39.5, width: 35.8, height: 12.5, fuselageDiameter: 3.76, color: '#d8e0ea', x: 0, z: -180 },
+  { name: 'Blue whale', shape: 'blueWhale', length: 29.9, width: 5.2, height: 4.2, color: '#416d92', x: 0, z: -220 },
 ];
-const GROUND_SIZE = 420;
-const GRID_BOX_SIZE = 5;
+const GROUND_SIZE = 1900;
+const GROUND_CENTER_X = 800;
+const GRID_BOX_SIZE = 10;
 const LABEL_GAP = 1.2;
 const LABEL_WIDTH = 6.4;
 const LABEL_HEIGHT = 1.85;
@@ -16,10 +22,17 @@ const HUMAN_SCALE = {
   width: 0.45,
   height: 1.75,
 };
+const INITIAL_CAMERA_TARGET = new THREE.Vector3(50, 5, -55);
+const INITIAL_CAMERA_POSITION = new THREE.Vector3(-20, 14, 35);
 
 const sceneRoot = document.querySelector('#app');
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: false,
+  logarithmicDepthBuffer: true,
+  powerPreference: 'high-performance',
+});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -27,7 +40,7 @@ sceneRoot.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#05070d');
-scene.fog = new THREE.Fog('#05070d', 90, 280);
+scene.fog = new THREE.Fog('#05070d', 620, 1800);
 
 const camera = new THREE.PerspectiveCamera(48, sceneRoot.clientWidth / sceneRoot.clientHeight, 0.01, 5000);
 camera.position.set(56, 34, 72);
@@ -37,7 +50,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.075;
 controls.maxPolarAngle = Math.PI * 0.48;
 controls.minDistance = 0.8;
-controls.maxDistance = 320;
+controls.maxDistance = 1800;
 controls.target.set(50, 0.9, 0);
 
 const ambient = new THREE.HemisphereLight('#9ebaff', '#10131c', 1.55);
@@ -55,7 +68,7 @@ const worldGroup = new THREE.Group();
 scene.add(worldGroup);
 
 buildScene();
-fitCameraToScene(false);
+setInitialCameraView();
 animate();
 
 function buildScene() {
@@ -68,12 +81,12 @@ function buildScene() {
     color: '#080a0e',
   });
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  ground.position.set(50, -0.014, 0);
+  ground.position.set(GROUND_CENTER_X, -0.014, 0);
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
   const grid = new THREE.GridHelper(GROUND_SIZE, GROUND_SIZE / GRID_BOX_SIZE, '#1d222b', '#1d222b');
-  grid.position.set(50, -0.002, 0);
+  grid.position.set(GROUND_CENTER_X, -0.002, 0);
   scene.add(grid);
 
   OBJECTS.forEach((item) => {
@@ -83,26 +96,13 @@ function buildScene() {
   window.addEventListener('resize', onResize);
 }
 
-function fitCameraToScene(animated) {
-  const box = new THREE.Box3().setFromObject(worldGroup);
-  if (box.isEmpty()) return;
-
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y * 12, size.z * 5, 2.5);
-  const fov = THREE.MathUtils.degToRad(camera.fov);
-  const fitHeightDistance = maxDim / (2 * Math.tan(fov / 2));
-  const fitWidthDistance = fitHeightDistance / camera.aspect;
-  const distance = Math.max(fitHeightDistance, fitWidthDistance) * (camera.aspect < 0.75 ? 1.28 : 1.08);
-  const direction = new THREE.Vector3(0.72, 0.42, 1).normalize();
-  const targetPosition = center.clone().add(direction.multiplyScalar(distance));
-
-  camera.near = Math.max(0.01, distance / 8000);
-  camera.far = Math.max(5000, distance * 8);
+function setInitialCameraView() {
+  camera.near = 0.5;
+  camera.far = 2200;
   camera.updateProjectionMatrix();
 
-  controls.target.copy(center);
-  camera.position.copy(targetPosition);
+  controls.target.copy(INITIAL_CAMERA_TARGET);
+  camera.position.copy(INITIAL_CAMERA_POSITION);
   controls.update();
 }
 
@@ -171,6 +171,22 @@ function createScaleObject(item) {
     return createRaceTrack(item);
   }
 
+  if (item.shape === 'blueWhale') {
+    return createBlueWhale(item);
+  }
+
+  if (item.shape === 'soccerField') {
+    return createSoccerField(item);
+  }
+
+  if (item.shape === 'distancePlane') {
+    return createDistancePlane(item);
+  }
+
+  if (item.shape === 'boeing737') {
+    return createBoeing737(item);
+  }
+
   return createSolidCuboid(item);
 }
 
@@ -226,6 +242,299 @@ function createRaceTrack(item) {
     runner.position.y = item.height;
     group.add(runner);
   }
+
+  return group;
+}
+
+function createBlueWhale(item) {
+  const group = new THREE.Group();
+  const topColor = item.color;
+  const bellyColor = '#8fb5c6';
+  const finColor = '#2f5371';
+  const bodyY = item.height * 0.52;
+
+  group.add(createEllipsoidMesh(
+    topColor,
+    item.x + item.length * 0.42,
+    bodyY,
+    item.z,
+    item.length * 0.42,
+    item.height * 0.42,
+    item.width * 0.46,
+    18,
+    9,
+  ));
+  group.add(createEllipsoidMesh(
+    bellyColor,
+    item.x + item.length * 0.35,
+    item.height * 0.36,
+    item.z,
+    item.length * 0.31,
+    item.height * 0.13,
+    item.width * 0.37,
+    14,
+    6,
+  ));
+  group.add(createOrientedCylinder(
+    new THREE.Vector3(item.x + item.length * 0.78, item.height * 0.54, item.z),
+    new THREE.Vector3(item.x + item.length * 0.95, item.height * 0.49, item.z),
+    item.height * 0.17,
+    item.height * 0.065,
+    finColor,
+    8,
+  ));
+
+  const tailY = item.height * 0.51;
+  const tailRootX = item.x + item.length * 0.92;
+  const tailTipX = item.x + item.length;
+  [-1, 1].forEach((side) => {
+    const points = side > 0
+      ? [
+          [tailRootX, item.z + item.width * 0.04],
+          [tailTipX, item.z + item.width * 0.56],
+          [item.x + item.length * 0.88, item.z + item.width * 0.22],
+        ]
+      : [
+          [tailRootX, item.z - item.width * 0.04],
+          [item.x + item.length * 0.88, item.z - item.width * 0.22],
+          [tailTipX, item.z - item.width * 0.56],
+        ];
+    group.add(createPrismFromXZ(points, tailY, item.height * 0.055, finColor));
+
+    const finRootZ = item.z + side * item.width * 0.33;
+    const finTipZ = item.z + side * item.width * 0.82;
+    const finPoints = side > 0
+      ? [
+          [item.x + item.length * 0.34, finRootZ],
+          [item.x + item.length * 0.49, finRootZ + item.width * 0.06],
+          [item.x + item.length * 0.40, finTipZ],
+        ]
+      : [
+          [item.x + item.length * 0.34, finRootZ],
+          [item.x + item.length * 0.40, finTipZ],
+          [item.x + item.length * 0.49, finRootZ - item.width * 0.06],
+        ];
+    group.add(createPrismFromXZ(finPoints, item.height * 0.34, item.height * 0.07, finColor));
+
+    group.add(createEllipsoidMesh(
+      '#06101b',
+      item.x + item.length * 0.13,
+      item.height * 0.62,
+      item.z + side * item.width * 0.34,
+      item.length * 0.008,
+      item.height * 0.026,
+      item.width * 0.018,
+      6,
+      4,
+    ));
+  });
+
+  group.add(createPrismFromXY([
+    [item.x + item.length * 0.59, item.height * 0.79],
+    [item.x + item.length * 0.66, item.height * 0.98],
+    [item.x + item.length * 0.71, item.height * 0.78],
+  ], item.z, item.width * 0.065, finColor));
+  group.add(createLowPolyMesh(
+    new THREE.BoxGeometry(item.length * 0.024, item.height * 0.012, item.width * 0.075),
+    '#172d42',
+    item.x + item.length * 0.29,
+    item.height * 0.9,
+    item.z,
+  ));
+  group.add(createHumanAt(item.x + item.length * 0.14, item.z + item.width / 2 + 1.25, '#51e4d4'));
+
+  return group;
+}
+
+function createSoccerField(item) {
+  const group = new THREE.Group();
+  const topY = item.height + 0.012;
+  const lineColor = '#eef3ff';
+  const lineWidth = 0.28;
+  const xMin = item.x;
+  const xMax = item.x + item.length;
+  const zMin = item.z - item.width / 2;
+  const zMax = item.z + item.width / 2;
+
+  const bands = 10;
+  for (let band = 0; band < bands; band += 1) {
+    const bandLength = item.length / bands;
+    group.add(createLowPolyMesh(
+      new THREE.BoxGeometry(bandLength, item.height, item.width),
+      band % 2 === 0 ? '#2d8147' : '#23683a',
+      item.x + bandLength * (band + 0.5),
+      item.height / 2,
+      item.z,
+    ));
+  }
+
+  addRectLines(group, xMin, xMax, zMin, zMax, topY, lineWidth, lineColor);
+  group.add(createFieldLine(item.x + item.length / 2, item.z, lineWidth, item.width, topY, lineColor));
+  group.add(createFieldCircle(item.x + item.length / 2, item.z, 9.15, lineWidth * 0.42, topY, lineColor));
+  group.add(createFieldSpot(item.x + item.length / 2, item.z, 0.42, topY, lineColor));
+
+  const penaltyDepth = 16.5;
+  const penaltyWidth = 40.32;
+  const goalDepth = 5.5;
+  const goalAreaWidth = 18.32;
+  const penaltySpotDistance = 11;
+  addRectLines(group, xMin, xMin + penaltyDepth, item.z - penaltyWidth / 2, item.z + penaltyWidth / 2, topY, lineWidth, lineColor);
+  addRectLines(group, xMax - penaltyDepth, xMax, item.z - penaltyWidth / 2, item.z + penaltyWidth / 2, topY, lineWidth, lineColor);
+  addRectLines(group, xMin, xMin + goalDepth, item.z - goalAreaWidth / 2, item.z + goalAreaWidth / 2, topY, lineWidth, lineColor);
+  addRectLines(group, xMax - goalDepth, xMax, item.z - goalAreaWidth / 2, item.z + goalAreaWidth / 2, topY, lineWidth, lineColor);
+  group.add(createFieldSpot(xMin + penaltySpotDistance, item.z, 0.34, topY, lineColor));
+  group.add(createFieldSpot(xMax - penaltySpotDistance, item.z, 0.34, topY, lineColor));
+
+  [
+    [7, 0, '#51e4d4'],
+    [24, -18, '#51e4d4'],
+    [24, 18, '#51e4d4'],
+    [43, -9, '#51e4d4'],
+    [43, 9, '#51e4d4'],
+    [57, 0, '#51e4d4'],
+    [98, 0, '#ffcf5c'],
+    [81, -18, '#ffcf5c'],
+    [81, 18, '#ffcf5c'],
+    [62, -9, '#ffcf5c'],
+    [62, 9, '#ffcf5c'],
+    [48, 0, '#ffcf5c'],
+  ].forEach(([x, z, color]) => {
+    group.add(createHumanAt(item.x + x, item.z + z, color, item.height));
+  });
+
+  return group;
+}
+
+function createDistancePlane(item) {
+  const group = new THREE.Group();
+  const segments = 10;
+  const segmentLength = item.length / segments;
+  const topY = item.height + 0.014;
+
+  for (let segment = 0; segment < segments; segment += 1) {
+    group.add(createLowPolyMesh(
+      new THREE.BoxGeometry(segmentLength, item.height, item.width),
+      segment % 2 === 0 ? item.color : '#101a29',
+      item.x + segmentLength * (segment + 0.5),
+      item.height / 2,
+      item.z,
+    ));
+  }
+
+  group.add(createFieldLine(item.x + item.length / 2, item.z, item.length, 0.18, topY, '#4f8cc9'));
+
+  group.add(createHumanAt(item.x + 2, item.z + item.width / 2 + 1.55, '#9fe870'));
+  return group;
+}
+
+function createBoeing737(item) {
+  const group = new THREE.Group();
+  const fuselageRadius = item.fuselageDiameter / 2;
+  const fuselageY = fuselageRadius + item.height * 0.08;
+  const bodyColor = item.color;
+  const bellyColor = '#aeb7c4';
+  const wingColor = '#c3ccd8';
+  const tailColor = '#3e73a9';
+  const noseTip = new THREE.Vector3(item.x, fuselageY, item.z);
+  const noseBase = new THREE.Vector3(item.x + item.length * 0.11, fuselageY, item.z);
+  const bodyEnd = new THREE.Vector3(item.x + item.length * 0.84, fuselageY, item.z);
+  const tailEnd = new THREE.Vector3(item.x + item.length * 0.97, fuselageY + fuselageRadius * 0.12, item.z);
+
+  group.add(createOrientedCone(noseBase, noseTip, fuselageRadius, bodyColor, 12));
+  group.add(createOrientedCylinder(noseBase, bodyEnd, fuselageRadius, fuselageRadius * 0.94, bodyColor, 14));
+  group.add(createOrientedCylinder(bodyEnd, tailEnd, fuselageRadius * 0.94, fuselageRadius * 0.32, bodyColor, 10));
+  group.add(createOrientedCylinder(
+    new THREE.Vector3(item.x + item.length * 0.16, fuselageY - fuselageRadius * 0.64, item.z),
+    new THREE.Vector3(item.x + item.length * 0.76, fuselageY - fuselageRadius * 0.64, item.z),
+    fuselageRadius * 0.2,
+    fuselageRadius * 0.16,
+    bellyColor,
+    8,
+  ));
+
+  [-1, 1].forEach((side) => {
+    const innerZ = item.z + side * fuselageRadius * 0.55;
+    const outerZ = item.z + side * item.width / 2;
+    const wingPoints = side > 0
+      ? [
+          [item.x + item.length * 0.43, innerZ],
+          [item.x + item.length * 0.56, item.z + side * fuselageRadius * 0.68],
+          [item.x + item.length * 0.63, outerZ],
+          [item.x + item.length * 0.52, outerZ],
+        ]
+      : [
+          [item.x + item.length * 0.43, innerZ],
+          [item.x + item.length * 0.52, outerZ],
+          [item.x + item.length * 0.63, outerZ],
+          [item.x + item.length * 0.56, item.z + side * fuselageRadius * 0.68],
+        ];
+    group.add(createPrismFromXZ(wingPoints, fuselageY - fuselageRadius * 0.08, 0.28, wingColor));
+
+    const stabilizerPoints = side > 0
+      ? [
+          [item.x + item.length * 0.82, item.z + side * fuselageRadius * 0.45],
+          [item.x + item.length * 0.96, item.z + side * item.width * 0.22],
+          [item.x + item.length * 0.88, item.z + side * item.width * 0.24],
+        ]
+      : [
+          [item.x + item.length * 0.82, item.z + side * fuselageRadius * 0.45],
+          [item.x + item.length * 0.88, item.z + side * item.width * 0.24],
+          [item.x + item.length * 0.96, item.z + side * item.width * 0.22],
+        ];
+    group.add(createPrismFromXZ(stabilizerPoints, fuselageY + fuselageRadius * 1.08, 0.22, wingColor));
+
+    const engineStart = new THREE.Vector3(item.x + item.length * 0.48, fuselageY - fuselageRadius * 1.06, item.z + side * item.width * 0.22);
+    const engineEnd = new THREE.Vector3(item.x + item.length * 0.57, fuselageY - fuselageRadius * 1.06, item.z + side * item.width * 0.22);
+    group.add(createOrientedCylinder(engineStart, engineEnd, 0.82, 0.72, '#8793a3', 10));
+    group.add(createOrientedCylinder(engineStart, engineStart.clone().add(new THREE.Vector3(0.12, 0, 0)), 0.66, 0.62, '#07101a', 10));
+
+    const mainWheelZ = item.z + side * 1.15;
+    group.add(createWheel(item.x + item.length * 0.53, 0.42, mainWheelZ, 0.42, 0.24, '#090c12'));
+    group.add(createLimb(
+      new THREE.Vector3(item.x + item.length * 0.53, fuselageY - fuselageRadius * 0.92, mainWheelZ),
+      new THREE.Vector3(item.x + item.length * 0.53, 0.82, mainWheelZ),
+      0.055,
+      '#9aa5b2',
+    ));
+  });
+
+  group.add(createPrismFromXY([
+    [item.x + item.length * 0.82, fuselageY + fuselageRadius * 0.6],
+    [item.x + item.length * 0.91, item.height],
+    [item.x + item.length * 0.98, fuselageY + fuselageRadius * 0.86],
+  ], item.z, 0.58, tailColor));
+
+  for (let windowIndex = 0; windowIndex < 13; windowIndex += 1) {
+    const windowX = item.x + item.length * (0.19 + windowIndex * 0.045);
+    [-1, 1].forEach((side) => {
+      group.add(createLowPolyMesh(
+        new THREE.BoxGeometry(0.42, 0.22, 0.035),
+        '#0d1724',
+        windowX,
+        fuselageY + fuselageRadius * 0.38,
+        item.z + side * (fuselageRadius + 0.025),
+      ));
+    });
+  }
+
+  [-1, 1].forEach((side) => {
+    group.add(createLowPolyMesh(
+      new THREE.BoxGeometry(0.58, 0.28, 0.04),
+      '#0d1724',
+      item.x + item.length * 0.08,
+      fuselageY + fuselageRadius * 0.45,
+      item.z + side * (fuselageRadius + 0.03),
+    ));
+  });
+
+  group.add(createWheel(item.x + item.length * 0.18, 0.33, item.z, 0.33, 0.22, '#090c12'));
+  group.add(createLimb(
+    new THREE.Vector3(item.x + item.length * 0.18, fuselageY - fuselageRadius * 0.86, item.z),
+    new THREE.Vector3(item.x + item.length * 0.18, 0.65, item.z),
+    0.052,
+    '#9aa5b2',
+  ));
+  group.add(createHumanAt(item.x + item.length * 0.16, item.z + item.width / 2 + 1.7, '#51e4d4'));
 
   return group;
 }
@@ -412,6 +721,144 @@ function createCarCabin(item, baseY, width, color) {
   ], width, item.z, color);
 }
 
+function createHumanAt(centerX, centerZ, color, baseY = 0) {
+  const human = createHumanSilhouette({
+    ...HUMAN_SCALE,
+    color,
+    x: centerX - HUMAN_SCALE.length / 2,
+    z: centerZ,
+  });
+  human.position.y = baseY;
+  return human;
+}
+
+function createEllipsoidMesh(color, x, y, z, scaleX, scaleY, scaleZ, widthSegments = 12, heightSegments = 6) {
+  const mesh = createLowPolyMesh(
+    new THREE.SphereGeometry(1, widthSegments, heightSegments),
+    color,
+    x,
+    y,
+    z,
+  );
+  mesh.scale.set(scaleX, scaleY, scaleZ);
+  return mesh;
+}
+
+function createOrientedCylinder(start, end, startRadius, endRadius, color, radialSegments = 8) {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  const mesh = createLowPolyMesh(
+    new THREE.CylinderGeometry(endRadius, startRadius, length, radialSegments),
+    color,
+    0,
+    0,
+    0,
+  );
+  mesh.position.copy(start).add(end).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  return mesh;
+}
+
+function createOrientedCone(base, tip, radius, color, radialSegments = 8) {
+  const direction = new THREE.Vector3().subVectors(tip, base);
+  const length = direction.length();
+  const mesh = createLowPolyMesh(
+    new THREE.ConeGeometry(radius, length, radialSegments),
+    color,
+    0,
+    0,
+    0,
+  );
+  mesh.position.copy(base).add(tip).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  return mesh;
+}
+
+function createPrismFromXZ(points, centerY, thickness, color) {
+  const halfThickness = thickness / 2;
+  const positions = [
+    ...points.flatMap(([x, z]) => [x, centerY - halfThickness, z]),
+    ...points.flatMap(([x, z]) => [x, centerY + halfThickness, z]),
+  ];
+  const geometry = new THREE.BufferGeometry();
+  const indices = createPrismIndices(points.length);
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const material = createLowPolyMaterial(color);
+  material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
+}
+
+function createPrismFromXY(points, centerZ, thickness, color) {
+  const halfThickness = thickness / 2;
+  const positions = [
+    ...points.flatMap(([x, y]) => [x, y, centerZ - halfThickness]),
+    ...points.flatMap(([x, y]) => [x, y, centerZ + halfThickness]),
+  ];
+  const geometry = new THREE.BufferGeometry();
+  const indices = createPrismIndices(points.length);
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const material = createLowPolyMaterial(color);
+  material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
+}
+
+function createPrismIndices(pointCount) {
+  const indices = [];
+  for (let index = 1; index < pointCount - 1; index += 1) {
+    indices.push(0, index, index + 1);
+    indices.push(pointCount, pointCount + index + 1, pointCount + index);
+  }
+  for (let index = 0; index < pointCount; index += 1) {
+    const next = (index + 1) % pointCount;
+    indices.push(index, next, pointCount + next);
+    indices.push(index, pointCount + next, pointCount + index);
+  }
+  return indices;
+}
+
+function createFieldLine(centerX, centerZ, lengthX, lengthZ, y, color) {
+  return createLowPolyMesh(
+    new THREE.BoxGeometry(lengthX, 0.035, lengthZ),
+    color,
+    centerX,
+    y,
+    centerZ,
+  );
+}
+
+function addRectLines(group, xMin, xMax, zMin, zMax, y, thickness, color) {
+  const centerX = (xMin + xMax) / 2;
+  const centerZ = (zMin + zMax) / 2;
+  group.add(createFieldLine(centerX, zMin, xMax - xMin, thickness, y, color));
+  group.add(createFieldLine(centerX, zMax, xMax - xMin, thickness, y, color));
+  group.add(createFieldLine(xMin, centerZ, thickness, zMax - zMin, y, color));
+  group.add(createFieldLine(xMax, centerZ, thickness, zMax - zMin, y, color));
+}
+
+function createFieldCircle(x, z, radius, tubeRadius, y, color) {
+  const circle = new THREE.Mesh(
+    new THREE.TorusGeometry(radius, tubeRadius, 4, 48),
+    createLowPolyMaterial(color),
+  );
+  circle.position.set(x, y + 0.008, z);
+  circle.rotation.x = Math.PI / 2;
+  return circle;
+}
+
+function createFieldSpot(x, z, radius, y, color) {
+  return createLowPolyMesh(
+    new THREE.CylinderGeometry(radius, radius, 0.035, 12),
+    color,
+    x,
+    y + 0.01,
+    z,
+  );
+}
+
 function createTaperedPrism(centerX, centerY, centerZ, bottomDepth, topDepth, bottomWidth, topWidth, height, color) {
   const yMin = centerY - height / 2;
   const yMax = centerY + height / 2;
@@ -511,7 +958,6 @@ function onResize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
-  fitCameraToScene(false);
 }
 
 function animate() {
