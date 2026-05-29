@@ -39,6 +39,17 @@ canvas {
   -webkit-user-select: none;
 }
 
+.brand-label {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  color: #d8d8d8;
+  font: 800 14px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+
 .custom-dimensions-form {
   position: absolute;
   top: 16px;
@@ -152,6 +163,12 @@ canvas {
 }
 
 @media (max-width: 520px) {
+  .brand-label {
+    top: 10px;
+    left: 10px;
+    font-size: 12px;
+  }
+
   .custom-dimensions-form {
     top: 10px;
     right: 10px;

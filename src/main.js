@@ -122,6 +122,7 @@ const scaleObjectLabels = [];
 let customObjectDimensions = null;
 
 buildScene();
+setupBrandLabel();
 setupCustomForm();
 setupPointerFocus();
 setInitialCameraView();
@@ -145,6 +146,13 @@ function buildScene() {
   scene.add(grid);
 
   window.addEventListener('resize', onResize);
+}
+
+function setupBrandLabel() {
+  const brandLabel = document.createElement('div');
+  brandLabel.className = 'brand-label';
+  brandLabel.textContent = 'HumanForScale';
+  sceneRoot.appendChild(brandLabel);
 }
 
 function setupCustomForm() {
@@ -863,7 +871,7 @@ function createEiffelTower(item) {
   const lightColor = '#97dcff';
   const [firstFloor, secondFloor, thirdFloor] = item.floorHeights;
   const [firstSide, secondSide, thirdSide] = item.floorSides;
-  const footTopY = 3.6;
+  const footTopY = 4.6;
   const topCrownLowerBeltThickness = 2.25;
   const topCrownUpperBeltThickness = 2.85;
   const topCrownBeltGap = 0.8;
@@ -971,14 +979,15 @@ function createEiffelTower(item) {
 function addEiffelFeet(group, centerX, centerZ, baseSide, archSpan, color) {
   const footSize = (baseSide - archSpan) / 2;
   const footOffset = baseSide / 2 - footSize / 2;
+  const footHeight = 4.6;
 
   [-1, 1].forEach((xSide) => {
     [-1, 1].forEach((zSide) => {
       group.add(createLowPolyMesh(
-        new THREE.BoxGeometry(footSize, 3.6, footSize),
+        new THREE.BoxGeometry(footSize, footHeight, footSize),
         color,
         centerX + xSide * footOffset,
-        1.8,
+        footHeight / 2,
         centerZ + zSide * footOffset,
       ));
     });
