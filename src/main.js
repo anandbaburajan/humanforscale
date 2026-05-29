@@ -10,6 +10,21 @@ const OBJECTS = [
   { name: '1 mile', shape: 'distancePlane', length: 1609.344, width: 18, height: 0.32, color: '#1b2b43', x: 0, z: -136 },
   { name: 'Boeing 737', shape: 'boeing737', length: 39.5, width: 35.8, height: 12.5, fuselageDiameter: 3.76, color: '#d8e0ea', x: 0, z: -180 },
   { name: 'Blue whale', shape: 'blueWhale', length: 29.9, width: 5.2, height: 4.2, color: '#416d92', x: 0, z: -220 },
+  {
+    name: 'Eiffel Tower',
+    shape: 'eiffelTower',
+    length: 124.9,
+    width: 124.9,
+    height: 330,
+    footWidth: 25,
+    archSpan: 74.24,
+    floorHeights: [57.64, 115.73, 276.13],
+    floorSides: [70.69, 40.96, 18.65],
+    structuralHeight: 324,
+    color: '#9d6b2f',
+    x: 0,
+    z: -320,
+  },
 ];
 const GROUND_SIZE = 1900;
 const GROUND_CENTER_X = 800;
@@ -495,6 +510,10 @@ function createScaleObject(item) {
     return createBlueWhale(item);
   }
 
+  if (item.shape === 'eiffelTower') {
+    return createEiffelTower(item);
+  }
+
   if (item.shape === 'soccerField') {
     return createSoccerField(item);
   }
@@ -664,6 +683,517 @@ function createBlueWhale(item) {
   group.add(createHumanAt(item.x + item.length * 0.14, item.z + item.width / 2 + 1.25, '#51e4d4'));
 
   return group;
+}
+
+function createEiffelTower(item) {
+  const group = new THREE.Group();
+  const centerX = item.x + item.length / 2;
+  const centerZ = item.z;
+  const ironColor = item.color;
+  const braceColor = '#5f3a18';
+  const deckColor = '#b17b35';
+  const shadowColor = '#4b2d12';
+  const lightColor = '#97dcff';
+  const [firstFloor, secondFloor, thirdFloor] = item.floorHeights;
+  const [firstSide, secondSide, thirdSide] = item.floorSides;
+  const footTopY = 3.6;
+  const topCrownLowerBeltThickness = 2.25;
+  const topCrownUpperBeltThickness = 2.85;
+  const topCrownBeltGap = 0.8;
+  const topCrownArcRise = 7.0;
+  const topRodBaseY = item.structuralHeight - 1.4;
+  const topCrownStructureY = topRodBaseY - topCrownArcRise - 0.2 - topCrownBeltGap - 2.25 * 1.5;
+  const topCrownStructureSide = thirdSide * 0.95;
+  const topCrownBeltY = topRodBaseY
+    - topCrownArcRise
+    - 0.2
+    - topCrownBeltGap
+    - topCrownLowerBeltThickness / 2
+    - topCrownUpperBeltThickness;
+  const topCrownUpperBeltSide = thirdSide * 0.88;
+  const topCrownLowerBeltSide = thirdSide * 1.12;
+  const upperShaftLowerY = THREE.MathUtils.lerp(secondFloor, thirdFloor, 0.21);
+  const upperShaftUpperY = THREE.MathUtils.lerp(secondFloor, thirdFloor, 0.59);
+  const levels = [
+    { y: footTopY, side: item.length, radius: 2.3 },
+    { y: 20, side: 112, radius: 2.0 },
+    { y: 39, side: 90, radius: 1.65 },
+    { y: firstFloor, side: firstSide, radius: 1.35 },
+    { y: 85, side: 54, radius: 1.05 },
+    { y: secondFloor, side: secondSide, radius: 0.82 },
+    { y: upperShaftLowerY, side: 34, radius: 0.68 },
+    { y: upperShaftUpperY, side: 24, radius: 0.52 },
+    { y: thirdFloor, side: thirdSide, radius: 0.38 },
+    { y: topCrownStructureY, side: topCrownStructureSide, radius: 0.26 },
+  ];
+
+  addEiffelFeet(group, centerX, centerZ, item.length, item.archSpan, shadowColor);
+  addEiffelBaseFaces(group, centerX, centerZ, levels, item.archSpan, firstFloor, firstSide, ironColor, braceColor);
+
+  for (let index = 0; index < levels.length - 1; index += 1) {
+    const lower = levels[index];
+    const upper = levels[index + 1];
+    addEiffelCornerLegs(group, centerX, centerZ, levels, lower, upper, ironColor);
+
+    if (lower.y >= firstFloor) {
+      for (let face = 0; face < 4; face += 1) {
+        if (upper.y <= secondFloor) {
+          addEiffelMiddleVoidPanels(
+            group,
+            centerX,
+            centerZ,
+            levels,
+            face,
+            lower,
+            upper,
+            firstFloor,
+            secondFloor,
+            braceColor,
+          );
+        } else {
+          addEiffelFacePanel(
+            group,
+            centerX,
+            centerZ,
+            levels,
+            face,
+            lower.y,
+            upper.y,
+            -lower.side / 2,
+            lower.side / 2,
+            -upper.side / 2,
+            upper.side / 2,
+            braceColor,
+            Math.max(lower.radius * 0.28, 0.07),
+            Math.max(2, Math.ceil((upper.y - lower.y) / 18)),
+          );
+        }
+      }
+    }
+  }
+
+  addEiffelBeltPlatform(group, centerX, centerZ, firstSide, firstFloor, deckColor, braceColor, lightColor, {
+    heightAbove: 18,
+    deckThickness: 3.6,
+  });
+  addEiffelBeltPlatform(group, centerX, centerZ, secondSide, secondFloor, deckColor, braceColor, lightColor, {
+    heightAbove: 11.5,
+    deckThickness: 2.7,
+  });
+  addEiffelTopCrown(
+    group,
+    centerX,
+    centerZ,
+    topCrownBeltY,
+    topCrownUpperBeltSide,
+    item.height,
+    deckColor,
+    braceColor,
+    {
+      beltGap: topCrownBeltGap,
+      lowerBeltSide: topCrownLowerBeltSide,
+      lowerBeltThickness: topCrownLowerBeltThickness,
+      upperBeltThickness: topCrownUpperBeltThickness,
+    },
+  );
+  group.add(createHumanAt(centerX - item.length / 2 + 9, centerZ + item.width / 2 + 3.2, '#51e4d4'));
+
+  return group;
+}
+
+function addEiffelFeet(group, centerX, centerZ, baseSide, archSpan, color) {
+  const footSize = (baseSide - archSpan) / 2;
+  const footOffset = baseSide / 2 - footSize / 2;
+
+  [-1, 1].forEach((xSide) => {
+    [-1, 1].forEach((zSide) => {
+      group.add(createLowPolyMesh(
+        new THREE.BoxGeometry(footSize, 3.6, footSize),
+        color,
+        centerX + xSide * footOffset,
+        1.8,
+        centerZ + zSide * footOffset,
+      ));
+    });
+  });
+}
+
+function addEiffelCornerLegs(group, centerX, centerZ, levels, lower, upper, color) {
+  const lowerCorners = getEiffelCorners(centerX, centerZ, levels, lower.y);
+  const upperCorners = getEiffelCorners(centerX, centerZ, levels, upper.y);
+
+  for (let index = 0; index < 4; index += 1) {
+    addEiffelRodBetween(group, lowerCorners[index], upperCorners[index], lower.radius, color, 6);
+  }
+}
+
+function addEiffelBaseFaces(group, centerX, centerZ, levels, archSpan, firstFloor, firstSide, ironColor, braceColor) {
+  const baseY = levels[0].y;
+  const baseHalf = getEiffelSideAt(levels, baseY) / 2;
+  const archHalf = archSpan / 2;
+  const topHalf = firstSide / 2;
+
+  for (let face = 0; face < 4; face += 1) {
+    addEiffelFacePanel(group, centerX, centerZ, levels, face, baseY, firstFloor, -baseHalf, -archHalf, -topHalf, -12, braceColor, 0.42, 5);
+    addEiffelFacePanel(group, centerX, centerZ, levels, face, baseY, firstFloor, archHalf, baseHalf, 12, topHalf, braceColor, 0.42, 5);
+    addEiffelBaseArch(group, centerX, centerZ, levels, face, archSpan, firstFloor, ironColor, braceColor);
+  }
+}
+
+function addEiffelBaseArch(group, centerX, centerZ, levels, face, span, firstFloor, ironColor, braceColor) {
+  const archPoints = [];
+  const springY = levels[0].y + 1.6;
+  const peakY = firstFloor - 6.5;
+
+  for (let index = 0; index <= 20; index += 1) {
+    const t = -1 + (index / 20) * 2;
+    const y = springY + (peakY - springY) * Math.sqrt(Math.max(0, 1 - t * t));
+    archPoints.push(getEiffelFacePoint(centerX, centerZ, levels, face, t * span / 2, y));
+  }
+
+  for (let index = 0; index < archPoints.length - 1; index += 1) {
+    addEiffelRodBetween(group, archPoints[index], archPoints[index + 1], 1.45, ironColor, 6);
+  }
+
+  for (let index = 0; index < archPoints.length - 1; index += 1) {
+    const innerStart = archPoints[index].clone().lerp(getEiffelFacePoint(centerX, centerZ, levels, face, 0, archPoints[index].y - 2.8), 0.12);
+    const innerEnd = archPoints[index + 1].clone().lerp(getEiffelFacePoint(centerX, centerZ, levels, face, 0, archPoints[index + 1].y - 2.8), 0.12);
+    addEiffelRodBetween(group, innerStart, innerEnd, 0.62, braceColor, 5);
+  }
+
+}
+
+function addEiffelFacePanel(group, centerX, centerZ, levels, face, bottomY, topY, leftBottom, rightBottom, leftTop, rightTop, color, radius, panelCount) {
+  const bottomLeft = getEiffelFacePoint(centerX, centerZ, levels, face, leftBottom, bottomY);
+  const bottomRight = getEiffelFacePoint(centerX, centerZ, levels, face, rightBottom, bottomY);
+  const topLeft = getEiffelFacePoint(centerX, centerZ, levels, face, leftTop, topY);
+  const topRight = getEiffelFacePoint(centerX, centerZ, levels, face, rightTop, topY);
+
+  addEiffelRodBetween(group, bottomLeft, topLeft, radius * 1.1, color, 4);
+  addEiffelRodBetween(group, bottomRight, topRight, radius * 1.1, color, 4);
+
+  for (let panel = 0; panel < panelCount; panel += 1) {
+    const t0 = panel / panelCount;
+    const t1 = (panel + 1) / panelCount;
+    const y0 = THREE.MathUtils.lerp(bottomY, topY, t0);
+    const y1 = THREE.MathUtils.lerp(bottomY, topY, t1);
+    const left0 = THREE.MathUtils.lerp(leftBottom, leftTop, t0);
+    const right0 = THREE.MathUtils.lerp(rightBottom, rightTop, t0);
+    const left1 = THREE.MathUtils.lerp(leftBottom, leftTop, t1);
+    const right1 = THREE.MathUtils.lerp(rightBottom, rightTop, t1);
+    const lowerLeft = getEiffelFacePoint(centerX, centerZ, levels, face, left0, y0);
+    const lowerRight = getEiffelFacePoint(centerX, centerZ, levels, face, right0, y0);
+    const upperLeft = getEiffelFacePoint(centerX, centerZ, levels, face, left1, y1);
+    const upperRight = getEiffelFacePoint(centerX, centerZ, levels, face, right1, y1);
+
+    addEiffelRodBetween(group, lowerLeft, lowerRight, radius * 0.75, color, 4);
+    addEiffelRodBetween(group, lowerLeft, upperRight, radius, color, 4);
+    addEiffelRodBetween(group, lowerRight, upperLeft, radius, color, 4);
+  }
+}
+
+function addEiffelMiddleVoidPanels(group, centerX, centerZ, levels, face, lower, upper, firstFloor, secondFloor, color) {
+  const lowerVoidHalf = getEiffelMiddleVoidHalfWidth(lower.y, firstFloor, secondFloor);
+  const upperVoidHalf = getEiffelMiddleVoidHalfWidth(upper.y, firstFloor, secondFloor);
+  const radius = Math.max(lower.radius * 0.28, 0.08);
+  const panelCount = Math.max(2, Math.ceil((upper.y - lower.y) / 15));
+
+  addEiffelFacePanel(
+    group,
+    centerX,
+    centerZ,
+    levels,
+    face,
+    lower.y,
+    upper.y,
+    -lower.side / 2,
+    -lowerVoidHalf,
+    -upper.side / 2,
+    -upperVoidHalf,
+    color,
+    radius,
+    panelCount,
+  );
+  addEiffelFacePanel(
+    group,
+    centerX,
+    centerZ,
+    levels,
+    face,
+    lower.y,
+    upper.y,
+    lowerVoidHalf,
+    lower.side / 2,
+    upperVoidHalf,
+    upper.side / 2,
+    color,
+    radius,
+    panelCount,
+  );
+}
+
+function getEiffelMiddleVoidHalfWidth(y, firstFloor, secondFloor) {
+  const t = THREE.MathUtils.clamp((y - firstFloor) / (secondFloor - firstFloor), 0, 1);
+  return THREE.MathUtils.lerp(20, 8.5, t);
+}
+
+function addEiffelPlatform(group, centerX, centerZ, side, y, thickness, deckColor, railColor, lightColor) {
+  const beamWidth = THREE.MathUtils.clamp(side * 0.095, 1.3, 5.8);
+  const halfSide = side / 2;
+  const beamCenterOffset = halfSide - beamWidth / 2;
+  const railY = y + thickness * 0.72;
+
+  group.add(createLowPolyMesh(new THREE.BoxGeometry(side, thickness, beamWidth), deckColor, centerX, y, centerZ + beamCenterOffset));
+  group.add(createLowPolyMesh(new THREE.BoxGeometry(side, thickness, beamWidth), deckColor, centerX, y, centerZ - beamCenterOffset));
+  group.add(createLowPolyMesh(new THREE.BoxGeometry(beamWidth, thickness, side), deckColor, centerX + beamCenterOffset, y, centerZ));
+  group.add(createLowPolyMesh(new THREE.BoxGeometry(beamWidth, thickness, side), deckColor, centerX - beamCenterOffset, y, centerZ));
+
+  const corners = [
+    new THREE.Vector3(centerX - halfSide, railY, centerZ + halfSide),
+    new THREE.Vector3(centerX + halfSide, railY, centerZ + halfSide),
+    new THREE.Vector3(centerX + halfSide, railY, centerZ - halfSide),
+    new THREE.Vector3(centerX - halfSide, railY, centerZ - halfSide),
+  ];
+  for (let index = 0; index < 4; index += 1) {
+    addEiffelRodBetween(group, corners[index], corners[(index + 1) % 4], 0.24, railColor, 4);
+  }
+
+  const lampCount = Math.max(4, Math.round(side / 7));
+  for (let index = 0; index < lampCount; index += 1) {
+    const offset = -side * 0.42 + (index / Math.max(1, lampCount - 1)) * side * 0.84;
+    group.add(createLowPolyMesh(new THREE.BoxGeometry(0.7, 0.35, 0.18), lightColor, centerX + offset, railY + 0.45, centerZ + halfSide - beamWidth * 0.4));
+  }
+}
+
+function addEiffelBeltPlatform(group, centerX, centerZ, side, y, deckColor, railColor, lightColor, options) {
+  const beamWidth = THREE.MathUtils.clamp(side * 0.085, 3.8, 6.2);
+  const halfSide = side / 2;
+  const lowerY = y - options.heightAbove;
+  const topY = y;
+  const midY = lowerY + options.heightAbove * 0.48;
+
+  addEiffelPlatform(group, centerX, centerZ, side, topY, options.deckThickness, deckColor, railColor, lightColor);
+
+  for (let face = 0; face < 4; face += 1) {
+    addEiffelBeltFace(group, centerX, centerZ, face, halfSide, topY, midY, lowerY, beamWidth, deckColor, railColor, lightColor);
+  }
+}
+
+function addEiffelBeltFace(group, centerX, centerZ, face, halfSide, topY, midY, lowerY, depth, deckColor, railColor, lightColor) {
+  const outerA = getSquareFacePoint(centerX, centerZ, face, -halfSide, halfSide + depth * 0.08);
+  const outerB = getSquareFacePoint(centerX, centerZ, face, halfSide, halfSide + depth * 0.08);
+  const lowerA = getSquareFacePoint(centerX, centerZ, face, -halfSide * 0.86, halfSide + depth * 0.02);
+  const lowerB = getSquareFacePoint(centerX, centerZ, face, halfSide * 0.86, halfSide + depth * 0.02);
+
+  addEiffelRodBetween(group, new THREE.Vector3(outerA.x, topY, outerA.z), new THREE.Vector3(outerB.x, topY, outerB.z), 0.42, railColor, 4);
+  addEiffelRodBetween(group, new THREE.Vector3(lowerA.x, lowerY, lowerA.z), new THREE.Vector3(lowerB.x, lowerY, lowerB.z), 0.38, railColor, 4);
+
+  const panelCount = 8;
+  for (let index = 0; index < panelCount; index += 1) {
+    const t0 = index / panelCount;
+    const t1 = (index + 1) / panelCount;
+    const u0 = THREE.MathUtils.lerp(-halfSide * 0.86, halfSide * 0.86, t0);
+    const u1 = THREE.MathUtils.lerp(-halfSide * 0.86, halfSide * 0.86, t1);
+    const uMid = (u0 + u1) / 2;
+    const topLeft = getSquareFacePoint(centerX, centerZ, face, u0, halfSide + depth * 0.14);
+    const topRight = getSquareFacePoint(centerX, centerZ, face, u1, halfSide + depth * 0.14);
+    const midLeft = getSquareFacePoint(centerX, centerZ, face, u0, halfSide + depth * 0.06);
+    const midRight = getSquareFacePoint(centerX, centerZ, face, u1, halfSide + depth * 0.06);
+    const lowerLeft = getSquareFacePoint(centerX, centerZ, face, u0, halfSide);
+    const lowerRight = getSquareFacePoint(centerX, centerZ, face, u1, halfSide);
+    const lowerMid = getSquareFacePoint(centerX, centerZ, face, uMid, halfSide);
+
+    addEiffelRodBetween(group, new THREE.Vector3(topLeft.x, topY, topLeft.z), new THREE.Vector3(lowerLeft.x, lowerY, lowerLeft.z), 0.28, railColor, 4);
+    addEiffelRodBetween(group, new THREE.Vector3(topRight.x, topY, topRight.z), new THREE.Vector3(lowerRight.x, lowerY, lowerRight.z), 0.28, railColor, 4);
+    addEiffelRodBetween(group, new THREE.Vector3(midLeft.x, midY, midLeft.z), new THREE.Vector3(lowerMid.x, lowerY, lowerMid.z), 0.22, railColor, 4);
+    addEiffelRodBetween(group, new THREE.Vector3(midRight.x, midY, midRight.z), new THREE.Vector3(lowerMid.x, lowerY, lowerMid.z), 0.22, railColor, 4);
+
+    if (index % 2 === 0) {
+      const lampPoint = getSquareFacePoint(centerX, centerZ, face, uMid, halfSide + depth * 0.58);
+      group.add(createLowPolyMesh(new THREE.BoxGeometry(0.64, 0.34, 0.2), lightColor, lampPoint.x, topY + 1.2, lampPoint.z));
+    }
+  }
+
+  const archCount = 10;
+  const archRadius = 0.18;
+  for (let index = 0; index < archCount; index += 1) {
+    const t0 = index / archCount;
+    const t1 = (index + 1) / archCount;
+    const u0 = THREE.MathUtils.lerp(-halfSide * 0.74, halfSide * 0.74, t0);
+    const u1 = THREE.MathUtils.lerp(-halfSide * 0.74, halfSide * 0.74, t1);
+    const arch = [
+      getSquareFacePoint(centerX, centerZ, face, u0, halfSide + depth * 0.03),
+      getSquareFacePoint(centerX, centerZ, face, (u0 + u1) / 2, halfSide + depth * 0.03),
+      getSquareFacePoint(centerX, centerZ, face, u1, halfSide + depth * 0.03),
+    ];
+    addEiffelRodBetween(group, new THREE.Vector3(arch[0].x, lowerY + 1.2, arch[0].z), new THREE.Vector3(arch[1].x, lowerY + 3.3, arch[1].z), archRadius, railColor, 4);
+    addEiffelRodBetween(group, new THREE.Vector3(arch[1].x, lowerY + 3.3, arch[1].z), new THREE.Vector3(arch[2].x, lowerY + 1.2, arch[2].z), archRadius, railColor, 4);
+  }
+}
+
+function getSquareFacePoint(centerX, centerZ, face, u, halfSide) {
+  if (face === 0) {
+    return new THREE.Vector3(centerX + u, 0, centerZ + halfSide);
+  }
+  if (face === 1) {
+    return new THREE.Vector3(centerX + halfSide, 0, centerZ - u);
+  }
+  if (face === 2) {
+    return new THREE.Vector3(centerX - u, 0, centerZ - halfSide);
+  }
+  return new THREE.Vector3(centerX - halfSide, 0, centerZ + u);
+}
+
+function addEiffelTopCrown(group, centerX, centerZ, beltY, beltSide, totalHeight, beltColor, rodColor, options = {}) {
+  const lowerBeltThickness = options.lowerBeltThickness ?? options.beltThickness ?? 2.8;
+  const upperBeltThickness = options.upperBeltThickness ?? options.beltThickness ?? lowerBeltThickness;
+  const beltGap = options.beltGap ?? 0.8;
+  const lowerBeltSide = options.lowerBeltSide ?? beltSide;
+  const upperBeltY = beltY + lowerBeltThickness / 2 + beltGap + upperBeltThickness / 2;
+  const upperBeltTopY = upperBeltY + upperBeltThickness / 2;
+  const rodBaseY = upperBeltTopY;
+  const rodMidY = (rodBaseY + totalHeight) / 2;
+
+  addEiffelPlatform(group, centerX, centerZ, lowerBeltSide, beltY, lowerBeltThickness, beltColor, rodColor, '#97dcff');
+  addEiffelPlatform(group, centerX, centerZ, beltSide, upperBeltY, upperBeltThickness, beltColor, rodColor, '#97dcff');
+  addEiffelCrownArcs(group, centerX, centerZ, beltSide, upperBeltTopY + 0.15, rodMidY, rodColor);
+  group.add(createOrientedCylinder(
+    new THREE.Vector3(centerX, rodBaseY, centerZ),
+    new THREE.Vector3(centerX, totalHeight, centerZ),
+    1.32,
+    0.72,
+    rodColor,
+    8,
+  ));
+}
+
+function addEiffelCrownArcs(group, centerX, centerZ, beltSide, baseY, rodMidY, color) {
+  const halfSide = beltSide / 2;
+  const end = new THREE.Vector3(centerX, rodMidY, centerZ);
+  const radius = 0.36;
+  const segments = 9;
+
+  [
+    new THREE.Vector3(centerX - halfSide, baseY, centerZ + halfSide),
+    new THREE.Vector3(centerX + halfSide, baseY, centerZ + halfSide),
+    new THREE.Vector3(centerX + halfSide, baseY, centerZ - halfSide),
+    new THREE.Vector3(centerX - halfSide, baseY, centerZ - halfSide),
+  ].forEach((start) => {
+    let previous = start;
+    const direction = new THREE.Vector2(start.x - centerX, start.z - centerZ).normalize();
+    const arc = createCircularCrownArc(start.distanceTo(new THREE.Vector3(centerX, baseY, centerZ)), baseY, rodMidY, segments);
+
+    for (let index = 1; index <= segments; index += 1) {
+      const point = arc[index];
+      const next = new THREE.Vector3(
+        centerX + direction.x * point.radius,
+        point.y,
+        centerZ + direction.y * point.radius,
+      );
+      addEiffelRodBetween(group, previous, next, radius, color, 6);
+      previous = next;
+    }
+  });
+}
+
+function createCircularCrownArc(startRadius, startY, endY, segments) {
+  const start = new THREE.Vector2(startRadius, startY);
+  const end = new THREE.Vector2(0, endY);
+  const chord = start.distanceTo(end);
+  const circleRadius = chord * 0.68;
+  const midpoint = start.clone().add(end).multiplyScalar(0.5);
+  const chordDirection = end.clone().sub(start).normalize();
+  const normal = new THREE.Vector2(-chordDirection.y, chordDirection.x);
+  const centerOffset = Math.sqrt(Math.max(0, circleRadius * circleRadius - (chord / 2) * (chord / 2)));
+  const centers = [
+    midpoint.clone().addScaledVector(normal, centerOffset),
+    midpoint.clone().addScaledVector(normal, -centerOffset),
+  ];
+  let bestArc = null;
+
+  centers.forEach((center) => {
+    const startAngle = Math.atan2(start.y - center.y, start.x - center.x);
+    const endAngle = Math.atan2(end.y - center.y, end.x - center.x);
+    let delta = endAngle - startAngle;
+
+    if (delta > Math.PI) {
+      delta -= Math.PI * 2;
+    } else if (delta < -Math.PI) {
+      delta += Math.PI * 2;
+    }
+
+    const points = [];
+    for (let index = 0; index <= segments; index += 1) {
+      const angle = startAngle + delta * (index / segments);
+      points.push({
+        radius: center.x + Math.cos(angle) * circleRadius,
+        y: center.y + Math.sin(angle) * circleRadius,
+      });
+    }
+
+    const midPoint = points[Math.floor(points.length / 2)];
+    if (!bestArc || midPoint.y > bestArc.midPoint.y || (midPoint.y === bestArc.midPoint.y && midPoint.radius > bestArc.midPoint.radius)) {
+      bestArc = { points, midPoint };
+    }
+  });
+
+  return bestArc.points;
+}
+
+function getEiffelCorners(centerX, centerZ, levels, y) {
+  const halfSide = getEiffelSideAt(levels, y) / 2;
+
+  return [
+    new THREE.Vector3(centerX - halfSide, y, centerZ + halfSide),
+    new THREE.Vector3(centerX + halfSide, y, centerZ + halfSide),
+    new THREE.Vector3(centerX + halfSide, y, centerZ - halfSide),
+    new THREE.Vector3(centerX - halfSide, y, centerZ - halfSide),
+  ];
+}
+
+function getEiffelFacePoint(centerX, centerZ, levels, face, u, y) {
+  const halfSide = getEiffelSideAt(levels, y) / 2;
+
+  if (face === 0) {
+    return new THREE.Vector3(centerX + u, y, centerZ + halfSide);
+  }
+  if (face === 1) {
+    return new THREE.Vector3(centerX + halfSide, y, centerZ - u);
+  }
+  if (face === 2) {
+    return new THREE.Vector3(centerX - u, y, centerZ - halfSide);
+  }
+  return new THREE.Vector3(centerX - halfSide, y, centerZ + u);
+}
+
+function getEiffelFaceU(centerX, centerZ, levels, face, point) {
+  if (face === 0) {
+    return point.x - centerX;
+  }
+  if (face === 1) {
+    return centerZ - point.z;
+  }
+  if (face === 2) {
+    return centerX - point.x;
+  }
+  return point.z - centerZ;
+}
+
+function getEiffelSideAt(levels, y) {
+  for (let index = 0; index < levels.length - 1; index += 1) {
+    const lower = levels[index];
+    const upper = levels[index + 1];
+
+    if (y >= lower.y && y <= upper.y) {
+      return THREE.MathUtils.lerp(lower.side, upper.side, (y - lower.y) / (upper.y - lower.y));
+    }
+  }
+
+  return levels[levels.length - 1].side;
+}
+
+function addEiffelRodBetween(group, start, end, radius, color, radialSegments = 6) {
+  group.add(createOrientedCylinder(start, end, radius, radius, color, radialSegments));
 }
 
 function createSoccerField(item) {
