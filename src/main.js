@@ -26,6 +26,8 @@ const OBJECTS = [
     z: -320,
   },
 ];
+const CUSTOM_OBJECT_COLOR = '#cfcfcf';
+const CUSTOM_OBJECT_ROW_GAP = 8;
 const GROUND_SIZE = 1900;
 const GROUND_CENTER_X = 800;
 const GRID_BOX_SIZE = 10;
@@ -115,17 +117,18 @@ scene.add(rimLight);
 const worldGroup = new THREE.Group();
 scene.add(worldGroup);
 
+const scaleObjectGroups = [];
+const scaleObjectLabels = [];
+let customObjectDimensions = null;
+
 buildScene();
+setupCustomForm();
 setupPointerFocus();
 setInitialCameraView();
 animate();
 
 function buildScene() {
-  OBJECTS.forEach((item) => {
-    const scaleObject = createScaleObject(item);
-    worldGroup.add(scaleObject);
-    focusableObjects.push(scaleObject);
-  });
+  rebuildScaleObjects();
 
   const groundGeometry = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE);
   const groundMaterial = new THREE.MeshBasicMaterial({
@@ -141,11 +144,161 @@ function buildScene() {
   grid.position.set(GROUND_CENTER_X, -0.002, 0);
   scene.add(grid);
 
-  OBJECTS.forEach((item) => {
-    scene.add(createGroundText(item.name, item.x - LABEL_GAP - LABEL_WIDTH / 2, item.z));
+  window.addEventListener('resize', onResize);
+}
+
+function setupCustomForm() {
+  const form = document.createElement('form');
+  form.className = 'custom-dimensions-form';
+  form.setAttribute('aria-label', 'Add custom cuboid');
+  form.innerHTML = `
+    <div class="custom-dimensions-form__title">Add a custom object</div>
+    <label class="custom-dimensions-form__field">
+      <span>Length <small>(m)</small></span>
+      <input name="custom-length" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="5.00" required>
+    </label>
+    <label class="custom-dimensions-form__field">
+      <span>Width <small>(m)</small></span>
+      <input name="custom-width" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="2.00" required>
+    </label>
+    <label class="custom-dimensions-form__field">
+      <span>Height <small>(m)</small></span>
+      <input name="custom-height" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="1.80" required>
+    </label>
+    <button type="submit">Add</button>
+    <p class="custom-dimensions-form__message" aria-live="polite"></p>
+  `;
+  form.addEventListener('submit', onCustomFormSubmit);
+  sceneRoot.appendChild(form);
+}
+
+function onCustomFormSubmit(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const dimensions = getCustomDimensions(form);
+  const message = form.querySelector('.custom-dimensions-form__message');
+
+  if (!dimensions) {
+    message.textContent = 'Use positive metre values.';
+    return;
+  }
+
+  message.textContent = '';
+  form.querySelector('button').textContent = 'Update';
+  setCustomObject(dimensions);
+}
+
+function getCustomDimensions(form) {
+  const values = ['length', 'width', 'height'].map((key) => {
+    const input = form.elements.namedItem(`custom-${key}`);
+    return Number.parseFloat(input.value);
   });
 
-  window.addEventListener('resize', onResize);
+  if (values.some((value) => !Number.isFinite(value) || value <= 0)) {
+    return null;
+  }
+
+  const [length, width, height] = values;
+  return { length, width, height };
+}
+
+function setCustomObject(dimensions) {
+  customObjectDimensions = dimensions;
+  const [customObject] = rebuildScaleObjects();
+  focusCameraOnItem(customObject);
+}
+
+function rebuildScaleObjects() {
+  clearScaleObjects();
+
+  const items = getVisibleScaleObjects();
+  items.forEach((item) => {
+    const scaleObject = createScaleObject(item);
+    worldGroup.add(scaleObject);
+    scaleObjectGroups.push(scaleObject);
+    focusableObjects.push(scaleObject);
+  });
+
+  items.forEach((item) => {
+    const label = createGroundText(item.name, item.x - LABEL_GAP - LABEL_WIDTH / 2, item.z);
+    scene.add(label);
+    scaleObjectLabels.push(label);
+  });
+
+  return items;
+}
+
+function clearScaleObjects() {
+  scaleObjectGroups.splice(0).forEach((scaleObject) => {
+    const focusIndex = focusableObjects.indexOf(scaleObject);
+    if (focusIndex >= 0) {
+      focusableObjects.splice(focusIndex, 1);
+    }
+    disposeSceneObject(scaleObject);
+  });
+
+  scaleObjectLabels.splice(0).forEach(disposeSceneObject);
+}
+
+function getVisibleScaleObjects() {
+  if (!customObjectDimensions) {
+    return OBJECTS.map((item) => ({ ...item }));
+  }
+
+  const customObject = createCustomObjectItem(customObjectDimensions);
+  const firstObject = OBJECTS[0];
+  const zOffset = -(customObject.width / 2 + firstObject.width / 2 + CUSTOM_OBJECT_ROW_GAP);
+  const shiftedObjects = OBJECTS.map((item) => ({
+    ...item,
+    z: item.z + zOffset,
+  }));
+
+  return [customObject, ...shiftedObjects];
+}
+
+function createCustomObjectItem({ length, width, height }) {
+  return {
+    name: 'Custom',
+    shape: 'customCuboid',
+    length,
+    width,
+    height,
+    color: CUSTOM_OBJECT_COLOR,
+    x: 0,
+    z: 0,
+  };
+}
+
+function focusCameraOnItem(item) {
+  const center = new THREE.Vector3(item.x + item.length / 2, item.height / 2, item.z);
+  const largestDimension = Math.max(item.length, item.width, item.height, HUMAN_SCALE.height);
+  const distance = THREE.MathUtils.clamp(largestDimension * 1.5, 4, MAX_CAMERA_DISTANCE * 0.9);
+  const cameraDirection = new THREE.Vector3(-0.62, 0.42, 0.66).normalize();
+
+  controls.target.copy(center);
+  controls.cursor.copy(center);
+  camera.position.copy(center).addScaledVector(cameraDirection, distance);
+  controls.update();
+}
+
+function disposeSceneObject(object) {
+  object.removeFromParent();
+  object.traverse((node) => {
+    if (node.geometry) {
+      node.geometry.dispose();
+    }
+
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    materials.filter(Boolean).forEach((material) => {
+      Object.values(material).forEach((value) => {
+        if (value?.isTexture) {
+          value.dispose();
+        }
+      });
+      material.dispose();
+    });
+  });
 }
 
 function setInitialCameraView() {
@@ -526,6 +679,10 @@ function createScaleObject(item) {
     return createBoeing737(item);
   }
 
+  if (item.shape === 'customCuboid') {
+    return createCustomCuboid(item);
+  }
+
   return createSolidCuboid(item);
 }
 
@@ -537,6 +694,16 @@ function createSolidCuboid(item) {
   const group = new THREE.Group();
   group.add(mesh);
   group.add(createEdges(geometry, item.color, mesh.position));
+  return group;
+}
+
+function createCustomCuboid(item) {
+  const group = createSolidCuboid(item);
+  const sideGap = Math.max(0.45, Math.min(2.5, item.width * 0.06 + 0.4));
+  const humanX = item.x + 1;
+  const humanZ = item.z + item.width / 2 + sideGap;
+
+  group.add(createHumanAt(humanX, humanZ, CUSTOM_OBJECT_COLOR));
   return group;
 }
 
