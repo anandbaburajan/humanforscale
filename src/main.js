@@ -1201,27 +1201,35 @@ function createSoccerField(item) {
   const topY = item.height + 0.012;
   const lineColor = '#eef3ff';
   const lineWidth = 0.28;
-  const xMin = item.x;
-  const xMax = item.x + item.length;
+  const touchlineRunoff = 2.6;
+  const goalLineRunoff = 3.25;
+  const xMin = item.x + goalLineRunoff;
+  const xMax = xMin + item.length;
   const zMin = item.z - item.width / 2;
   const zMax = item.z + item.width / 2;
+  const surfaceXMin = item.x;
+  const surfaceXMax = xMax + goalLineRunoff;
+  const surfaceZMin = zMin - touchlineRunoff;
+  const surfaceZMax = zMax + touchlineRunoff;
+  const surfaceLength = surfaceXMax - surfaceXMin;
+  const surfaceWidth = surfaceZMax - surfaceZMin;
 
-  const bands = 10;
+  const bands = 12;
   for (let band = 0; band < bands; band += 1) {
-    const bandLength = item.length / bands;
+    const bandLength = surfaceLength / bands;
     group.add(createLowPolyMesh(
-      new THREE.BoxGeometry(bandLength, item.height, item.width),
+      new THREE.BoxGeometry(bandLength, item.height, surfaceWidth),
       band % 2 === 0 ? '#2d8147' : '#23683a',
-      item.x + bandLength * (band + 0.5),
+      surfaceXMin + bandLength * (band + 0.5),
       item.height / 2,
       item.z,
     ));
   }
 
   addRectLines(group, xMin, xMax, zMin, zMax, topY, lineWidth, lineColor);
-  group.add(createFieldLine(item.x + item.length / 2, item.z, lineWidth, item.width, topY, lineColor));
-  group.add(createFieldCircle(item.x + item.length / 2, item.z, 9.15, lineWidth * 0.42, topY, lineColor));
-  group.add(createFieldSpot(item.x + item.length / 2, item.z, 0.42, topY, lineColor));
+  group.add(createFieldLine((xMin + xMax) / 2, item.z, lineWidth, item.width, topY, lineColor));
+  group.add(createFieldCircle((xMin + xMax) / 2, item.z, 9.15, lineWidth * 0.42, topY, lineColor));
+  group.add(createFieldSpot((xMin + xMax) / 2, item.z, 0.42, topY, lineColor));
 
   const penaltyDepth = 16.5;
   const penaltyWidth = 40.32;
@@ -1234,6 +1242,8 @@ function createSoccerField(item) {
   addRectLines(group, xMax - goalDepth, xMax, item.z - goalAreaWidth / 2, item.z + goalAreaWidth / 2, topY, lineWidth, lineColor);
   group.add(createFieldSpot(xMin + penaltySpotDistance, item.z, 0.34, topY, lineColor));
   group.add(createFieldSpot(xMax - penaltySpotDistance, item.z, 0.34, topY, lineColor));
+  addSoccerGoal(group, xMin, item.z, -1, item.height, lineColor);
+  addSoccerGoal(group, xMax, item.z, 1, item.height, lineColor);
 
   [
     [7, 0, '#51e4d4'],
@@ -1249,10 +1259,69 @@ function createSoccerField(item) {
     [62, 9, '#ffcf5c'],
     [48, 0, '#ffcf5c'],
   ].forEach(([x, z, color]) => {
-    group.add(createHumanAt(item.x + x, item.z + z, color, item.height));
+    group.add(createHumanAt(xMin + x, item.z + z, color, item.height));
   });
 
   return group;
+}
+
+function addSoccerGoal(group, goalLineX, centerZ, direction, fieldHeight, color) {
+  const goalWidth = 7.32;
+  const goalHeight = 2.44;
+  const goalDepth = 2.25;
+  const postRadius = 0.09;
+  const baseY = fieldHeight + postRadius;
+  const topY = fieldHeight + goalHeight;
+  const nearX = goalLineX;
+  const farX = goalLineX + direction * goalDepth;
+  const leftZ = centerZ - goalWidth / 2;
+  const rightZ = centerZ + goalWidth / 2;
+
+  const frontLeftBase = new THREE.Vector3(nearX, baseY, leftZ);
+  const frontRightBase = new THREE.Vector3(nearX, baseY, rightZ);
+  const frontLeftTop = new THREE.Vector3(nearX, topY, leftZ);
+  const frontRightTop = new THREE.Vector3(nearX, topY, rightZ);
+  const backLeftBase = new THREE.Vector3(farX, baseY, leftZ);
+  const backRightBase = new THREE.Vector3(farX, baseY, rightZ);
+  const backLeftTop = new THREE.Vector3(farX, topY, leftZ);
+  const backRightTop = new THREE.Vector3(farX, topY, rightZ);
+
+  [
+    [frontLeftBase, frontLeftTop],
+    [frontRightBase, frontRightTop],
+    [frontLeftTop, frontRightTop],
+    [frontLeftTop, backLeftTop],
+    [frontRightTop, backRightTop],
+    [backLeftTop, backRightTop],
+    [backLeftBase, backLeftTop],
+    [backRightBase, backRightTop],
+    [frontLeftBase, backLeftBase],
+    [frontRightBase, backRightBase],
+  ].forEach(([start, end]) => {
+    group.add(createOrientedCylinder(start, end, postRadius, postRadius, color, 8));
+  });
+
+  const netColor = '#dfe8f5';
+  const sideNetMaterial = createLowPolyMaterial(netColor, 0.2);
+  sideNetMaterial.side = THREE.DoubleSide;
+
+  const backNet = new THREE.Mesh(
+    new THREE.PlaneGeometry(goalWidth, goalHeight),
+    sideNetMaterial,
+  );
+  backNet.position.set(farX, fieldHeight + goalHeight / 2, centerZ);
+  backNet.rotation.y = Math.PI / 2;
+  group.add(backNet);
+
+  [leftZ, rightZ].forEach((z) => {
+    const sideNet = new THREE.Mesh(
+      new THREE.PlaneGeometry(goalDepth, goalHeight),
+      sideNetMaterial.clone(),
+    );
+    sideNet.position.set((nearX + farX) / 2, fieldHeight + goalHeight / 2, z);
+    sideNet.rotation.y = direction > 0 ? 0 : Math.PI;
+    group.add(sideNet);
+  });
 }
 
 function createDistancePlane(item) {
