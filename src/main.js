@@ -1361,12 +1361,12 @@ function createBoeing737(item) {
   const metalColor = '#aeb8c6';
 
   const fuselageSections = [
-    { x: noseX, radius: fuselageRadius * 0.14, y: fuselageY - fuselageRadius * 0.16 },
-    { x: item.x + item.length * 0.014, radius: fuselageRadius * 0.42, y: fuselageY - fuselageRadius * 0.1 },
-    { x: item.x + item.length * 0.038, radius: fuselageRadius * 0.7, y: fuselageY - fuselageRadius * 0.04 },
-    { x: item.x + item.length * 0.072, radius: fuselageRadius * 0.9, y: fuselageY },
-    { x: item.x + item.length * 0.105, radius: fuselageRadius * 0.98, y: fuselageY },
-    { x: item.x + item.length * 0.13, radius: fuselageRadius, y: fuselageY },
+    { x: noseX, radius: fuselageRadius * 0.2, y: fuselageY - fuselageRadius * 0.18, upperRadiusScale: 0.72 },
+    { x: item.x + item.length * 0.01, radius: fuselageRadius * 0.48, y: fuselageY - fuselageRadius * 0.13, upperRadiusScale: 0.58 },
+    { x: item.x + item.length * 0.026, radius: fuselageRadius * 0.74, y: fuselageY - fuselageRadius * 0.07, upperRadiusScale: 0.64 },
+    { x: item.x + item.length * 0.045, radius: fuselageRadius * 0.9, y: fuselageY - fuselageRadius * 0.03, upperRadiusScale: 0.7 },
+    { x: item.x + item.length * 0.063, radius: fuselageRadius * 0.98, y: fuselageY - fuselageRadius * 0.005, upperRadiusScale: 0.94 },
+    { x: item.x + item.length * 0.08, radius: fuselageRadius, y: fuselageY },
     { x: item.x + item.length * 0.75, radius: fuselageRadius, y: fuselageY },
     { x: item.x + item.length * 0.86, radius: fuselageRadius * 0.72, y: fuselageY + fuselageRadius * 0.08 },
     { x: item.x + item.length * 0.955, radius: fuselageRadius * 0.3, y: fuselageY + fuselageRadius * 0.18 },
@@ -1374,8 +1374,7 @@ function createBoeing737(item) {
   ];
 
   group.add(createFuselageSurface(fuselageSections, item.z, 345, 555, bodyColor));
-  group.add(createFuselageSurface(fuselageSections.slice(0, 4), item.z, 195, 345, bodyColor));
-  group.add(createFuselageSurface(fuselageSections.slice(3), item.z, 195, 345, bellyColor));
+  group.add(createFuselageSurface(fuselageSections, item.z, 195, 345, bellyColor));
   group.add(createFuselageNoseCap(fuselageSections[0], item.z, bodyColor));
 
   [-1, 1].forEach((side) => {
@@ -1929,7 +1928,6 @@ function createSmoothOrientedCone(base, tip, radius, color, radialSegments = 18)
 
 function createFuselageSurface(sections, centerZ, startAngleDegrees, endAngleDegrees, color) {
   const radialSegments = 28;
-  const radiusOffset = 1;
   const startAngle = THREE.MathUtils.degToRad(startAngleDegrees);
   const endAngle = THREE.MathUtils.degToRad(endAngleDegrees);
   const positions = [];
@@ -1939,11 +1937,8 @@ function createFuselageSurface(sections, centerZ, startAngleDegrees, endAngleDeg
     for (let step = 0; step <= radialSegments; step += 1) {
       const t = step / radialSegments;
       const angle = startAngle + (endAngle - startAngle) * t;
-      positions.push(
-        section.x,
-        section.y + Math.sin(angle) * section.radius * radiusOffset,
-        centerZ + Math.cos(angle) * section.radius * radiusOffset,
-      );
+      const point = getFuselageSectionPoint(section, centerZ, angle);
+      positions.push(point.x, point.y, point.z);
     }
   });
 
@@ -1968,13 +1963,40 @@ function createFuselageSurface(sections, centerZ, startAngleDegrees, endAngleDeg
 }
 
 function createFuselageNoseCap(section, centerZ, color) {
-  const geometry = new THREE.CircleGeometry(section.radius, 28);
-  geometry.rotateY(Math.PI / 2);
-  geometry.translate(section.x, section.y, centerZ);
+  const radialSegments = 28;
+  const positions = [section.x, section.y, centerZ];
+  const indices = [];
+
+  for (let step = 0; step <= radialSegments; step += 1) {
+    const angle = (Math.PI * 2 * step) / radialSegments;
+    const point = getFuselageSectionPoint(section, centerZ, angle);
+    positions.push(point.x, point.y, point.z);
+  }
+
+  for (let step = 1; step <= radialSegments; step += 1) {
+    indices.push(0, step, step + 1);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
   geometry.computeVertexNormals();
   const material = createMaterial(color);
   material.side = THREE.DoubleSide;
   return new THREE.Mesh(geometry, material);
+}
+
+function getFuselageSectionPoint(section, centerZ, angle) {
+  const sin = Math.sin(angle);
+  const verticalScale = sin >= 0
+    ? section.upperRadiusScale ?? 1
+    : section.lowerRadiusScale ?? 1;
+
+  return {
+    x: section.x,
+    y: section.y + sin * section.radius * verticalScale,
+    z: centerZ + Math.cos(angle) * section.radius,
+  };
 }
 
 function createVariablePrism(points, thickness, color) {
