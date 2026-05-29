@@ -1437,9 +1437,10 @@ function createBoeing737(item) {
   });
 
   addVerticalTail(group, item, fuselageY, fuselageRadius, navy, red);
+  addBoeingWindshield(group, item, fuselageY, fuselageRadius);
   addBoeingWindowsAndDoors(group, item, fuselageY, fuselageRadius, glassColor, metalColor);
   addNoseLandingGear(group, item, fuselageY, fuselageRadius, metalColor, glassColor);
-  group.add(createHumanAt(item.x + item.length * 0.16, item.z + halfSpan + 1.7, '#51e4d4'));
+  group.add(createHumanAt(item.x + item.length * 0.1, item.z + fuselageRadius + 2.35, '#51e4d4'));
 
   return group;
 }
@@ -1556,6 +1557,59 @@ function addVerticalTail(group, item, fuselageY, fuselageRadius, navy, red) {
       [item.x + item.length * 0.964, rootY + 3.52],
       [item.x + item.length * 0.91, rootY + 4.18],
     ], z, red));
+  });
+}
+
+function addBoeingWindshield(group, item, fuselageY, fuselageRadius) {
+  const windshieldColor = '#010205';
+  const frontX = item.x + item.length * 0.044;
+  const lowerY = fuselageY + fuselageRadius * 0.62;
+  const upperY = fuselageY + fuselageRadius * 0.86;
+  const frontLowerY = fuselageY + fuselageRadius * 0.52;
+  const frontUpperY = fuselageY + fuselageRadius * 0.86;
+  const frontLowerHalfWidth = fuselageRadius * 0.58;
+  const frontUpperHalfWidth = fuselageRadius * 0.34;
+  const frontWindshieldTilt = THREE.MathUtils.degToRad(40);
+
+  const frontWindshieldPoints = [
+    [frontX, frontLowerY, item.z - frontLowerHalfWidth],
+    [frontX, frontUpperY, item.z - frontUpperHalfWidth],
+    [frontX, frontUpperY, item.z + frontUpperHalfWidth],
+    [frontX, frontLowerY, item.z + frontLowerHalfWidth],
+  ].map(([x, y, z]) => {
+    const backwardOffset = (y - frontLowerY) * Math.tan(frontWindshieldTilt);
+    return [x + backwardOffset, y, z];
+  });
+
+  group.add(createFlatPolygonFromXYZ(frontWindshieldPoints, windshieldColor));
+
+  [-1, 1].forEach((side) => {
+    const sideWindshieldTilt = THREE.MathUtils.degToRad(15);
+    const sideWindshieldBottomY = lowerY - fuselageRadius * 0.03;
+    const sideZ = getFuselageSidePanelZ(
+      item.z,
+      side,
+      fuselageRadius,
+      fuselageY,
+      (lowerY + upperY) / 2,
+      0.06,
+    );
+
+    const sideWindshieldPoints = [
+      [item.x + item.length * 0.049, lowerY - fuselageRadius * 0.03],
+      [item.x + item.length * 0.085, lowerY + fuselageRadius * 0.04],
+      [item.x + item.length * 0.099, upperY - fuselageRadius * 0.04],
+      [item.x + item.length * 0.058, upperY + fuselageRadius * 0.02],
+    ].map(([x, y]) => {
+      const inwardOffset = Math.max(0, y - sideWindshieldBottomY) * Math.sin(sideWindshieldTilt);
+      return [
+        x,
+        y,
+        sideZ - side * inwardOffset,
+      ];
+    });
+
+    group.add(createFlatPolygonFromXYZ(sideWindshieldPoints, windshieldColor));
   });
 }
 
@@ -1716,88 +1770,194 @@ function createHumanSilhouette(item) {
   const shirtColor = item.color;
   const pantsColor = '#25364c';
   const skinColor = '#f0b98f';
+  const hairColor = '#17110d';
+  const shoeColor = '#070a10';
+  const beltColor = '#121826';
   const centerX = item.x + item.length / 2;
   const centerZ = item.z;
 
-  const hipY = item.height * 0.49;
+  const footHeight = item.height * 0.085;
+  const ankleY = item.height * 0.105;
+  const kneeY = item.height * 0.32;
+  const hipY = item.height * 0.51;
   const waistY = item.height * 0.55;
-  const shoulderY = item.height * 0.81;
-  const neckY = item.height * 0.85;
-  const headRadius = Math.min(item.length * 0.34, item.width * 0.2, item.height * 0.075);
-  const armRadius = Math.min(item.length, item.width) * 0.07;
-  const shoulderHalfWidth = item.width / 2 - armRadius;
+  const shoulderY = item.height * 0.79;
+  const neckY = item.height * 0.855;
+  const headRadius = Math.min(item.length * 0.34, item.width * 0.2, item.height * 0.074);
+  const headCenterY = item.height - headRadius;
+  const limbBaseRadius = Math.min(item.length, item.width);
+  const armRadius = limbBaseRadius * 0.09;
+  const forearmRadius = limbBaseRadius * 0.075;
+  const legRadius = limbBaseRadius * 0.115;
+  const calfRadius = limbBaseRadius * 0.095;
+  const shoulderHalfWidth = item.width * 0.42;
 
-  group.add(createLowPolyMesh(
-    new THREE.IcosahedronGeometry(headRadius, 1),
-    skinColor,
+  group.add(createHumanGroundShadow(centerX, centerZ, item));
+  group.add(createEllipsoidMesh(
+    shirtColor,
     centerX,
-    item.height - headRadius,
+    item.height * 0.66,
+    centerZ,
+    item.length * 0.36,
+    item.height * 0.215,
+    item.width * 0.36,
+    10,
+    7,
+  ));
+  group.add(createEllipsoidMesh(
+    pantsColor,
+    centerX,
+    hipY,
+    centerZ,
+    item.length * 0.35,
+    item.height * 0.075,
+    item.width * 0.3,
+    9,
+    5,
+  ));
+  group.add(createLowPolyMesh(
+    new THREE.BoxGeometry(item.length * 0.52, item.height * 0.026, item.width * 0.38),
+    beltColor,
+    centerX,
+    waistY,
     centerZ,
   ));
   group.add(createLowPolyMesh(
-    new THREE.CylinderGeometry(item.length * 0.1, item.length * 0.11, item.height * 0.055, 7),
+    new THREE.CylinderGeometry(item.length * 0.095, item.length * 0.11, item.height * 0.12, 8),
     skinColor,
     centerX,
     neckY,
     centerZ,
   ));
-  group.add(createTaperedPrism(
-    centerX,
-    (waistY + shoulderY) / 2,
-    centerZ,
-    item.length * 0.55,
-    item.length * 0.72,
-    item.width * 0.34,
-    item.width * 0.72,
-    shoulderY - waistY,
-    shirtColor,
-  ));
-  group.add(createTaperedPrism(
-    centerX,
-    (hipY + waistY) / 2,
-    centerZ,
-    item.length * 0.58,
-    item.length * 0.5,
-    item.width * 0.46,
-    item.width * 0.34,
-    waistY - hipY,
-    pantsColor,
-  ));
   group.add(createLowPolyMesh(
-    new THREE.BoxGeometry(item.length * 0.64, hipY, item.width * 0.42),
-    pantsColor,
+    new THREE.IcosahedronGeometry(headRadius, 2),
+    skinColor,
     centerX,
-    hipY / 2,
+    headCenterY,
     centerZ,
+  ));
+  group.add(createEllipsoidMesh(
+    hairColor,
+    centerX - item.length * 0.018,
+    headCenterY + headRadius * 0.44,
+    centerZ,
+    headRadius * 0.92,
+    headRadius * 0.42,
+    headRadius * 0.94,
+    10,
+    5,
+  ));
+  [-1, 1].forEach((side) => {
+    group.add(createLowPolyMesh(
+      new THREE.SphereGeometry(headRadius * 0.095, 6, 4),
+      '#10131a',
+      centerX + headRadius * 0.84,
+      headCenterY + headRadius * 0.07,
+      centerZ + side * headRadius * 0.32,
+    ));
+  });
+  group.add(createSmoothOrientedCone(
+    new THREE.Vector3(centerX + headRadius * 0.72, headCenterY - headRadius * 0.06, centerZ),
+    new THREE.Vector3(centerX + headRadius * 1.04, headCenterY - headRadius * 0.1, centerZ),
+    headRadius * 0.15,
+    skinColor,
+    7,
   ));
 
   [-1, 1].forEach((side) => {
     const shoulderZ = centerZ + side * shoulderHalfWidth;
-    const elbowY = item.height * 0.61;
-    const wristY = item.height * 0.39;
+    const shoulder = new THREE.Vector3(centerX, shoulderY, shoulderZ);
+    const elbow = new THREE.Vector3(centerX + item.length * 0.015, item.height * 0.58, shoulderZ - side * item.width * 0.025);
+    const wrist = new THREE.Vector3(centerX + item.length * 0.006, item.height * 0.37, shoulderZ - side * item.width * 0.008);
+    const hip = new THREE.Vector3(centerX - item.length * 0.01, hipY, centerZ + side * item.width * 0.115);
+    const knee = new THREE.Vector3(centerX + item.length * 0.012, kneeY, centerZ + side * item.width * 0.1);
+    const ankle = new THREE.Vector3(centerX, ankleY, centerZ + side * item.width * 0.115);
 
+    group.add(createLowPolyMesh(
+      new THREE.SphereGeometry(armRadius * 1.25, 8, 5),
+      shirtColor,
+      shoulder.x,
+      shoulder.y,
+      shoulder.z,
+    ));
     group.add(createLimb(
-      new THREE.Vector3(centerX, shoulderY, shoulderZ),
-      new THREE.Vector3(centerX + item.length * 0.02, elbowY, shoulderZ - side * item.width * 0.015),
+      shoulder,
+      elbow,
       armRadius,
       shirtColor,
     ));
+    group.add(createLowPolyMesh(
+      new THREE.SphereGeometry(armRadius * 1.08, 8, 5),
+      shirtColor,
+      elbow.x,
+      elbow.y,
+      elbow.z,
+    ));
     group.add(createLimb(
-      new THREE.Vector3(centerX + item.length * 0.02, elbowY, shoulderZ - side * item.width * 0.015),
-      new THREE.Vector3(centerX + item.length * 0.01, wristY, shoulderZ),
-      armRadius * 0.9,
+      elbow,
+      wrist,
+      forearmRadius,
       skinColor,
     ));
     group.add(createLowPolyMesh(
-      new THREE.IcosahedronGeometry(armRadius * 1.25, 0),
+      new THREE.SphereGeometry(forearmRadius * 1.45, 8, 5),
       skinColor,
-      centerX + item.length * 0.01,
-      wristY - armRadius * 0.9,
-      shoulderZ,
+      wrist.x,
+      wrist.y - forearmRadius * 0.35,
+      wrist.z,
+    ));
+    group.add(createLimb(
+      hip,
+      knee,
+      legRadius,
+      pantsColor,
+    ));
+    group.add(createLowPolyMesh(
+      new THREE.SphereGeometry(legRadius * 1.08, 8, 5),
+      pantsColor,
+      knee.x,
+      knee.y,
+      knee.z,
+    ));
+    group.add(createLimb(
+      knee,
+      ankle,
+      calfRadius,
+      pantsColor,
+    ));
+    group.add(createLowPolyMesh(
+      new THREE.SphereGeometry(calfRadius * 1.18, 8, 5),
+      pantsColor,
+      ankle.x,
+      ankle.y,
+      ankle.z,
+    ));
+    group.add(createLowPolyMesh(
+      new THREE.BoxGeometry(item.length * 0.54, footHeight, item.width * 0.16),
+      shoeColor,
+      centerX + item.length * 0.08,
+      footHeight / 2,
+      centerZ + side * item.width * 0.13,
     ));
   });
 
   return group;
+}
+
+function createHumanGroundShadow(centerX, centerZ, item) {
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 18),
+    new THREE.MeshBasicMaterial({
+      color: '#02040a',
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+    }),
+  );
+  shadow.position.set(centerX, 0.006, centerZ);
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.scale.set(item.length * 1.75, item.width * 1.05, 1);
+  return shadow;
 }
 
 function createCarSilhouette(item) {
@@ -2025,6 +2185,23 @@ function createFlatPolygonFromXY(points, z, color) {
   geometry.computeVertexNormals();
   const material = createLowPolyMaterial(color);
   material.side = THREE.DoubleSide;
+  return new THREE.Mesh(geometry, material);
+}
+
+function createFlatPolygonFromXYZ(points, color) {
+  const geometry = new THREE.BufferGeometry();
+  const indices = [];
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap(([x, y, z]) => [x, y, z]), 3));
+  for (let index = 1; index < points.length - 1; index += 1) {
+    indices.push(0, index, index + 1);
+  }
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  const material = createLowPolyMaterial(color);
+  material.side = THREE.DoubleSide;
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -1;
   return new THREE.Mesh(geometry, material);
 }
 
