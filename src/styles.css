@@ -65,7 +65,7 @@ canvas.is-panning {
   z-index: 2;
   display: inline-grid;
   place-items: center;
-  min-height: 34px;
+  min-height: 30px;
   padding: 0 12px;
   border: 1px solid #ffffff;
   background: #ffffff;
@@ -83,6 +83,42 @@ canvas.is-panning {
 }
 
 .coffee-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.reset-camera-button {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #d8d8d8;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reset-camera-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 2.2;
+}
+
+.reset-camera-button:hover {
+  color: #ffffff;
+}
+
+.reset-camera-button:focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 3px;
 }
@@ -112,7 +148,7 @@ canvas.is-panning {
   padding: 9px;
   border: 1px solid rgba(196, 196, 196, 0.62);
   border-radius: 0;
-  background: rgba(0, 0, 0, 0.92);
+  background: #000000;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.95),
     0 20px 52px rgba(0, 0, 0, 0.58),
@@ -206,7 +242,7 @@ canvas.is-panning {
 
 .custom-dimensions-form__submit {
   width: 100%;
-  height: 32px;
+  height: 30px;
   margin-top: 10px;
   border: 1px solid #cfcfcf;
   border-radius: 0;
@@ -243,26 +279,39 @@ canvas.is-panning {
   .coffee-button {
     top: 16px;
     right: 16px;
-    min-height: 30px;
+    min-height: 26px;
     padding: 0 9px;
     font-size: 10px;
   }
 
+  .reset-camera-button {
+    left: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 4;
+    width: 21px;
+    height: 21px;
+  }
+
+  .reset-camera-button svg {
+    width: 21px;
+    height: 21px;
+  }
+
   .custom-object-toggle {
     position: absolute;
-    right: 20px;
-    bottom: max(20px, env(safe-area-inset-bottom));
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
     z-index: 4;
     display: grid;
     place-items: center;
-    width: 44px;
-    height: 44px;
+    width: 26px;
+    height: 26px;
     border: 0;
     border-radius: 0;
     background: #ffffff;
     color: #000000;
     cursor: pointer;
-    font: 900 28px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font: 900 18px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     padding: 0;
     box-shadow:
       0 14px 38px rgba(0, 0, 0, 0.5),
@@ -276,73 +325,22 @@ canvas.is-panning {
 
   .custom-dimensions-backdrop {
     display: block;
+    z-index: 5;
+    background: transparent;
   }
 
   .custom-dimensions-form {
     display: none;
-    right: 20px;
-    bottom: max(20px, env(safe-area-inset-bottom));
-    left: 20px;
-    z-index: 4;
-    width: auto;
-    padding: 12px;
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 6;
   }
 
   .custom-dimensions-form.is-open {
     display: block;
   }
 
-  .custom-dimensions-form__header {
-    margin-bottom: 10px;
-    padding: 0 0 12px;
-  }
-
-  .custom-dimensions-form__close {
-    display: grid;
-    place-items: center;
-    position: relative;
-    flex: 0 0 auto;
-    width: 22px;
-    height: 24px;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    margin-right: -2px;
-    padding: 0;
-  }
-
-  .custom-dimensions-form__close::before,
-  .custom-dimensions-form__close::after {
-    position: absolute;
-    width: 14px;
-    height: 2px;
-    border-radius: 999px;
-    background: #d8d8d8;
-    content: "";
-  }
-
-  .custom-dimensions-form__close::before {
-    transform: rotate(45deg);
-  }
-
-  .custom-dimensions-form__close::after {
-    transform: rotate(-45deg);
-  }
-
-  .custom-dimensions-form__close:hover {
-    opacity: 0.72;
-  }
-
-  .custom-dimensions-form__close:focus-visible {
-    outline: 2px solid #d8d8d8;
-    outline-offset: 2px;
-  }
-
-  .custom-dimensions-form__field {
-    grid-template-columns: minmax(0, 1fr) 52px;
-  }
-
   .custom-dimensions-form__submit {
-    height: 44px;
+    height: 26px;
   }
 }

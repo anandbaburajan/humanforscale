@@ -75,6 +75,7 @@ const mobileCustomFormQuery = window.matchMedia('(max-width: 520px)');
 buildScene();
 setupBrandLabel();
 setupCoffeeButton();
+setupResetButton();
 setupCustomForm();
 setupCameraInteractions({ renderer, camera, controls, focusableObjects });
 setInitialCameraView();
@@ -115,6 +116,23 @@ function setupCoffeeButton() {
   coffeeButton.rel = 'noreferrer';
   coffeeButton.textContent = 'Buy me a coffee';
   sceneRoot.appendChild(coffeeButton);
+}
+
+function setupResetButton() {
+  const resetButton = document.createElement('button');
+  resetButton.className = 'reset-camera-button';
+  resetButton.type = 'button';
+  resetButton.title = 'Reset view';
+  resetButton.setAttribute('aria-label', 'Reset view');
+  resetButton.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18.2 8.2A7.2 7.2 0 1 0 19 14" />
+      <path d="M18.2 8.2l-4.2.1" />
+      <path d="M18.2 8.2l-.1-4.2" />
+    </svg>
+  `;
+  resetButton.addEventListener('click', setInitialCameraView);
+  sceneRoot.appendChild(resetButton);
 }
 
 function setupCustomForm() {
