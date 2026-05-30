@@ -47,15 +47,155 @@ canvas.is-panning {
   cursor: grabbing;
 }
 
-.brand-label {
+.brand-lockup {
   position: absolute;
   top: 16px;
   left: 16px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 30px;
+}
+
+.brand-label {
   color: #d8d8d8;
-  font: 800 18px/34px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font: 800 18px/30px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   letter-spacing: 0;
   pointer-events: none;
+}
+
+.help-button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
+  cursor: pointer;
+  padding: 0;
+}
+
+.help-button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 2.4;
+}
+
+.help-button:hover {
+  background: #d8d8d8;
+  color: #000000;
+}
+
+.help-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.help-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: rgba(0, 0, 0, 0.56);
+}
+
+.help-dialog-backdrop[hidden] {
+  display: none;
+}
+
+.help-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 8;
+  width: min(390px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(216, 216, 216, 0.72);
+  border-radius: 0;
+  background: #000000;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.95),
+    0 24px 70px rgba(0, 0, 0, 0.68),
+    inset 0 0 0 1px rgba(196, 196, 196, 0.12);
+  color: #d8d8d8;
+  font: 700 12px/1.45 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  padding: 16px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.help-dialog[hidden] {
+  display: none;
+}
+
+.help-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(196, 196, 196, 0.5);
+  padding-bottom: 12px;
+}
+
+.help-dialog__title {
+  color: #ffffff;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.help-dialog__close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #d8d8d8;
+  cursor: pointer;
+  padding: 0;
+}
+
+.help-dialog__close svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-width: 2.2;
+}
+
+.help-dialog__close:hover {
+  color: #ffffff;
+}
+
+.help-dialog__close:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.help-dialog__description {
+  margin: 0;
+  color: #b8b8b8;
+  line-height: 1.55;
+}
+
+.help-dialog__description span {
+  display: block;
+}
+
+.help-dialog__description span + span {
+  margin-top: 8px;
 }
 
 .coffee-button {
@@ -269,11 +409,20 @@ canvas.is-panning {
 }
 
 @media (max-width: 520px) {
-  .brand-label {
+  .brand-lockup {
     top: 16px;
     left: 16px;
+    gap: 14px;
+  }
+
+  .brand-label {
     font-size: 16px;
     line-height: 30px;
+  }
+
+  .help-button {
+    width: 16px;
+    height: 16px;
   }
 
   .coffee-button {

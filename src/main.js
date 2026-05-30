@@ -70,10 +70,14 @@ let customObjectDimensions = null;
 let customForm = null;
 let customFormToggle = null;
 let customFormBackdrop = null;
+let helpDialog = null;
+let helpDialogBackdrop = null;
+let helpDialogToggle = null;
 const mobileCustomFormQuery = window.matchMedia('(max-width: 520px)');
 
 buildScene();
 setupBrandLabel();
+setupHelpDialog();
 setupCoffeeButton();
 setupResetButton();
 setupCustomForm();
@@ -102,10 +106,95 @@ function buildScene() {
 }
 
 function setupBrandLabel() {
+  const brandLockup = document.createElement('div');
+  brandLockup.className = 'brand-lockup';
+
   const brandLabel = document.createElement('div');
   brandLabel.className = 'brand-label';
   brandLabel.textContent = 'HumanForScale';
-  sceneRoot.appendChild(brandLabel);
+
+  helpDialogToggle = document.createElement('button');
+  helpDialogToggle.className = 'help-button';
+  helpDialogToggle.type = 'button';
+  helpDialogToggle.title = 'About HumanForScale';
+  helpDialogToggle.setAttribute('aria-label', 'About HumanForScale');
+  helpDialogToggle.setAttribute('aria-controls', 'help-dialog');
+  helpDialogToggle.setAttribute('aria-haspopup', 'dialog');
+  helpDialogToggle.setAttribute('aria-expanded', 'false');
+  helpDialogToggle.innerHTML = `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 17h.01" />
+      <path d="M9.8 9.3a2.4 2.4 0 1 1 3.2 2.25c-.78.3-1 .72-1 1.45v.25" />
+    </svg>
+  `;
+  helpDialogToggle.addEventListener('click', openHelpDialog);
+
+  brandLockup.appendChild(brandLabel);
+  brandLockup.appendChild(helpDialogToggle);
+  sceneRoot.appendChild(brandLockup);
+}
+
+function setupHelpDialog() {
+  helpDialogBackdrop = document.createElement('div');
+  helpDialogBackdrop.className = 'help-dialog-backdrop';
+  helpDialogBackdrop.hidden = true;
+  helpDialogBackdrop.addEventListener('click', closeHelpDialog);
+
+  helpDialog = document.createElement('section');
+  helpDialog.id = 'help-dialog';
+  helpDialog.className = 'help-dialog';
+  helpDialog.hidden = true;
+  helpDialog.setAttribute('role', 'dialog');
+  helpDialog.setAttribute('aria-modal', 'true');
+  helpDialog.setAttribute('aria-labelledby', 'help-dialog-title');
+  helpDialog.setAttribute('aria-describedby', 'help-dialog-description');
+  helpDialog.innerHTML = `
+    <div class="help-dialog__header">
+      <div id="help-dialog-title" class="help-dialog__title">HumanForScale</div>
+      <button class="help-dialog__close" type="button" aria-label="Close help dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12" />
+          <path d="M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+    <p id="help-dialog-description" class="help-dialog__description">
+      <span>HumanForScale helps you see how big things really are.</span>
+      <span>Compare familiar objects like a car, soccer field, Boeing 737, blue whale, and Eiffel Tower on the same scale.</span>
+      <span>You can also add your own object by entering its length, width, and height in metres. For example, a Falcon 9 rocket is 70 m long, 3.7 m wide, and 3.7 m tall.</span>
+    </p>
+  `;
+  helpDialog.querySelector('.help-dialog__close').addEventListener('click', closeHelpDialog);
+  window.addEventListener('keydown', onHelpDialogKeyDown);
+
+  sceneRoot.appendChild(helpDialogBackdrop);
+  sceneRoot.appendChild(helpDialog);
+}
+
+function openHelpDialog() {
+  helpDialog.hidden = false;
+  helpDialogBackdrop.hidden = false;
+  helpDialogToggle.setAttribute('aria-expanded', 'true');
+
+  requestAnimationFrame(() => {
+    helpDialog.querySelector('.help-dialog__close')?.focus();
+  });
+}
+
+function closeHelpDialog() {
+  helpDialog.hidden = true;
+  helpDialogBackdrop.hidden = true;
+  helpDialogToggle.setAttribute('aria-expanded', 'false');
+  helpDialogToggle.focus();
+}
+
+function onHelpDialogKeyDown(event) {
+  if (event.key !== 'Escape' || helpDialog.hidden) {
+    return;
+  }
+
+  event.preventDefault();
+  closeHelpDialog();
 }
 
 function setupCoffeeButton() {
