@@ -1,7 +1,7 @@
 # HumanForScale
 
 A dark themed Three.js visualizer showing exact-scale low-poly references:
-a car, Boeing 737, blue whale, Eiffel Tower, soccer field, 100 meters, 1 km, and 1 mile.
+a car, Boeing 737-800, blue whale, Eiffel Tower, soccer field, 100 meters, 1 km, and 1 mile.
 
 ## Development
 

@@ -6,7 +6,7 @@ export const OBJECTS = [
   { name: '100 m', shape: 'track', length: 100, lanes: 8, laneWidth: 1.22, height: 0.32, color: '#b9573f', x: 0, z: -8 },
   { name: '1 km', shape: 'distancePlane', length: 1000, width: 18, height: 0.32, color: '#172335', x: 0, z: -112 },
   { name: '1 mile', shape: 'distancePlane', length: 1609.344, width: 18, height: 0.32, color: '#1b2b43', x: 0, z: -136 },
-  { name: 'Boeing 737', shape: 'boeing737', length: 39.5, width: 35.8, height: 12.5, fuselageDiameter: 3.76, color: '#f6f8fb', x: 0, z: -180 },
+  { name: 'Boeing 737-800', shape: 'boeing737', length: 39.47, width: 35.79, height: 12.55, fuselageDiameter: 3.76, color: '#f6f8fb', x: 0, z: -180 },
   { name: 'Blue whale', shape: 'blueWhale', length: 29.9, width: 5.2, height: 4.2, color: '#416d92', x: 0, z: -220 },
   {
     name: 'Eiffel Tower',
@@ -56,4 +56,3 @@ export const DOUBLE_TAP_MAX_MOVEMENT = 34;
 export const FOCUS_DISTANCE_SCALE = 0.45;
 export const FOCUS_MIN_DISTANCE = 1.2;
 export const FOCUS_MAX_DISTANCE = 180;
-

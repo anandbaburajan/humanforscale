@@ -22,6 +22,38 @@ function createLowPolyMaterial(color, opacity = 1) {
   });
 }
 
+const INCH_TO_METERS = 0.0254;
+const BOEING_737_800 = {
+  wingSpanWithoutWinglets: 34.32,
+  wingletHeight: 2.49,
+  wingRootChord: 6.3,
+  wingTipChord: 1.77,
+  horizontalStabilizerSpan: 14.35,
+  horizontalStabilizerArea: 32.78,
+  horizontalStabilizerTaperRatio: 0.203,
+  nacelleLength: 4.7,
+  nacelleRadius: 2.06 / 2,
+  nacelleSpanRatio: 0.282,
+  mainGearTrack: 5.72,
+  wheelbase: 15.6,
+  mainWheelRadius: (44.5 * INCH_TO_METERS) / 2,
+  mainWheelDepth: 16.5 * INCH_TO_METERS,
+  noseWheelRadius: (27 * INCH_TO_METERS) / 2,
+  noseWheelDepth: 7.75 * INCH_TO_METERS,
+  topOfFuselageClearance: 5.41,
+  engineGroundClearance: 0.48,
+  wingTipGroundClearance: 3.66,
+  stabilizerGroundClearance: 5.49,
+};
+
+const BOEING_737_800_HORIZONTAL_STABILIZER_ROOT_CHORD =
+  (2 * BOEING_737_800.horizontalStabilizerArea)
+  / (BOEING_737_800.horizontalStabilizerSpan * (1 + BOEING_737_800.horizontalStabilizerTaperRatio));
+
+const BOEING_737_800_HORIZONTAL_STABILIZER_TIP_CHORD =
+  BOEING_737_800_HORIZONTAL_STABILIZER_ROOT_CHORD
+  * BOEING_737_800.horizontalStabilizerTaperRatio;
+
 export function createGroundText(text, x, z, maxAnisotropy = 1) {
   const canvas = document.createElement('canvas');
   canvas.width = 768;
@@ -920,12 +952,14 @@ function createDistancePlane(item) {
 function createBoeing737(item) {
   const group = new THREE.Group();
   const fuselageRadius = item.fuselageDiameter / 2;
-  const fuselageY = fuselageRadius + item.height * 0.08;
+  const fuselageY = BOEING_737_800.topOfFuselageClearance - fuselageRadius;
   const halfSpan = item.width / 2;
   const noseX = item.x;
   const tailX = item.x + item.length;
   const wingRootY = fuselageY - fuselageRadius * 0.3;
-  const tailplaneY = fuselageY + fuselageRadius * 0.5;
+  const wingThickness = 0.32;
+  const stabilizerThickness = 0.12;
+  const tailplaneY = BOEING_737_800.stabilizerGroundClearance + stabilizerThickness / 2 + 0.04;
   const bodyColor = item.color;
   const bellyColor = '#123a73';
   const navy = '#123a73';
@@ -953,15 +987,14 @@ function createBoeing737(item) {
   group.add(createFuselageNoseCap(fuselageSections[0], item.z, bodyColor));
 
   [-1, 1].forEach((side) => {
-    const outerZ = item.z + side * halfSpan;
+    const baselineHalfSpan = Math.min(BOEING_737_800.wingSpanWithoutWinglets / 2, halfSpan);
+    const outerZ = item.z + side * baselineHalfSpan;
     const rootZ = item.z + side * fuselageRadius * 0.82;
-    const tipY = wingRootY + 1.12;
-    const wingRootChordScale = 0.8;
-    const wingTipChordScale = 0.6;
+    const tipY = BOEING_737_800.wingTipGroundClearance + wingThickness / 2;
     const wingRootCenterX = item.x + item.length * 0.52;
     const wingTipCenterX = item.x + item.length * 0.6125;
-    const wingRootChord = item.length * 0.21 * wingRootChordScale;
-    const wingTipChord = item.length * 0.125 * wingTipChordScale;
+    const wingRootChord = BOEING_737_800.wingRootChord;
+    const wingTipChord = BOEING_737_800.wingTipChord;
     const wingRootTrailingX = wingRootCenterX + wingRootChord / 2;
     const wingRootLeadingX = wingRootCenterX - wingRootChord / 2;
     const wingTipTrailingX = wingTipCenterX + wingTipChord / 2;
@@ -980,32 +1013,32 @@ function createBoeing737(item) {
           [wingTipLeadingX, tipY + 0.04, outerZ],
         ];
 
-    group.add(createVariablePrism(wingPoints, 0.32, wingColor));
+    group.add(createVariablePrism(wingPoints, wingThickness, wingColor));
     addWingPanelLines(group, wingPoints, side, wingAccent);
 
-    const wingletThickness = 0.36;
-    const wingletZ = item.z + side * (halfSpan - wingletThickness / 2);
+    const wingletThickness = Math.max(halfSpan - baselineHalfSpan, 0.36);
+    const wingletZ = item.z + side * (baselineHalfSpan + wingletThickness / 2);
     const wingletChordX = wingTipTrailingX - wingTipLeadingX;
     group.add(createPrismFromXY([
       [wingTipLeadingX + wingletChordX * 0.016, tipY],
       [wingTipTrailingX, tipY - 0.02],
-      [wingTipLeadingX + wingletChordX * 0.928, tipY + 1.54],
-      [wingTipLeadingX + wingletChordX * 0.2, tipY + 1.78],
+      [wingTipLeadingX + wingletChordX * 0.928, tipY + BOEING_737_800.wingletHeight * 0.86],
+      [wingTipLeadingX + wingletChordX * 0.2, tipY + BOEING_737_800.wingletHeight],
     ], wingletZ, wingletThickness, navy));
 
-    const stabilizerOuterZ = item.z + side * (item.width * 0.2);
+    const stabilizerOuterZ = item.z + side * (BOEING_737_800.horizontalStabilizerSpan / 2);
     const stabilizerRootZ = item.z + side * fuselageRadius * 0.94;
     const stabilizerRootTrailingX = item.x + item.length * 0.955;
     const stabilizerTipTrailingX = item.x + item.length * 0.972;
-    const stabilizerRootChord = item.length * 0.119;
-    const stabilizerTipChord = stabilizerRootChord * 0.5;
+    const stabilizerRootChord = BOEING_737_800_HORIZONTAL_STABILIZER_ROOT_CHORD;
+    const stabilizerTipChord = BOEING_737_800_HORIZONTAL_STABILIZER_TIP_CHORD;
     const stabilizerPoints = [
       [stabilizerRootTrailingX - stabilizerRootChord, tailplaneY, stabilizerRootZ],
       [stabilizerRootTrailingX, tailplaneY - 0.04, stabilizerRootZ],
       [stabilizerTipTrailingX, tailplaneY + 0.18, stabilizerOuterZ],
       [stabilizerTipTrailingX - stabilizerTipChord, tailplaneY + 0.32, stabilizerOuterZ],
     ];
-    group.add(createVariablePrism(stabilizerPoints, 0.12, wingColor));
+    group.add(createVariablePrism(stabilizerPoints, stabilizerThickness, wingColor));
 
     addBoeingEngine(group, item, side, fuselageY, fuselageRadius, wingRootY, navy, metalColor, glassColor);
     addMainLandingGear(group, item, side, fuselageY, fuselageRadius, metalColor, glassColor);
@@ -1021,12 +1054,13 @@ function createBoeing737(item) {
 }
 
 function addBoeingEngine(group, item, side, fuselageY, fuselageRadius, wingRootY, navy, metalColor, glassColor) {
-  const engineRadius = fuselageRadius * 0.52;
-  const engineLength = item.length * 0.074;
-  const engineFrontX = item.x + item.length * 0.43;
+  const engineRadius = BOEING_737_800.nacelleRadius;
+  const engineLength = BOEING_737_800.nacelleLength;
+  const engineCenterX = item.x + item.length * 0.467;
+  const engineFrontX = engineCenterX - engineLength / 2;
   const engineBackX = engineFrontX + engineLength;
-  const engineY = Math.max(engineRadius + 0.34, fuselageY - fuselageRadius * 0.83);
-  const engineZ = item.z + side * item.width * 0.16;
+  const engineY = engineRadius + BOEING_737_800.engineGroundClearance;
+  const engineZ = item.z + side * (BOEING_737_800.wingSpanWithoutWinglets / 2) * BOEING_737_800.nacelleSpanRatio;
   const front = new THREE.Vector3(engineFrontX, engineY, engineZ);
   const back = new THREE.Vector3(engineBackX, engineY + 0.04, engineZ);
 
@@ -1069,39 +1103,67 @@ function addBoeingEngine(group, item, side, fuselageY, fuselageRadius, wingRootY
 
 function addMainLandingGear(group, item, side, fuselageY, fuselageRadius, metalColor, tireColor) {
   const gearX = item.x + item.length * 0.535;
-  const strutTop = new THREE.Vector3(gearX, fuselageY - fuselageRadius * 0.78, item.z + side * 0.72);
-  const strutBase = new THREE.Vector3(gearX, 0.88, item.z + side * 1.28);
-  const wheelRadius = 0.43;
-  const wheelDepth = 0.18;
+  const gearHalfTrack = BOEING_737_800.mainGearTrack / 2;
+  const wheelRadius = BOEING_737_800.mainWheelRadius;
+  const wheelDepth = BOEING_737_800.mainWheelDepth;
+  const wheelGap = 0.08;
+  const wheelPairCenterZ = item.z + side * gearHalfTrack;
+  const wheelCenterSeparation = wheelDepth + wheelGap;
+  const wheelZValues = [
+    wheelPairCenterZ - side * wheelCenterSeparation / 2,
+    wheelPairCenterZ + side * wheelCenterSeparation / 2,
+  ];
+  const wingGearMountX = item.x + item.length * 0.497;
+  const wingGearMountY = fuselageY - fuselageRadius * 0.34;
+  const wingGearMountZ = item.z + side * (fuselageRadius + 0.55);
+  const strutTop = new THREE.Vector3(wingGearMountX, wingGearMountY, wingGearMountZ);
+  const axleCenter = new THREE.Vector3(gearX + 0.06, wheelRadius, wheelPairCenterZ);
 
-  group.add(createLimb(strutTop, strutBase, 0.06, metalColor));
+  group.add(createLowPolyMesh(
+    new THREE.BoxGeometry(1.28, 0.22, 0.88),
+    metalColor,
+    wingGearMountX,
+    wingGearMountY + 0.05,
+    wingGearMountZ,
+  ));
+  group.add(createLimb(strutTop, axleCenter, 0.13, metalColor));
   group.add(createLimb(
-    strutBase,
-    new THREE.Vector3(gearX + 0.34, 0.42, item.z + side * 1.48),
-    0.038,
+    new THREE.Vector3(gearX + 0.06, wheelRadius, wheelZValues[0]),
+    new THREE.Vector3(gearX + 0.06, wheelRadius, wheelZValues[1]),
+    0.045,
     metalColor,
   ));
 
-  [1.18, 1.48].forEach((offset) => {
-    group.add(createWheel(gearX + 0.06, wheelRadius, item.z + side * offset, wheelRadius, wheelDepth, tireColor));
-    group.add(createWheel(gearX + 0.06, wheelRadius, item.z + side * offset, wheelRadius * 0.45, wheelDepth * 1.08, '#c7d0dc'));
+  wheelZValues.forEach((wheelZ) => {
+    group.add(createWheel(gearX + 0.06, wheelRadius, wheelZ, wheelRadius, wheelDepth, tireColor));
+    group.add(createWheel(gearX + 0.06, wheelRadius, wheelZ, wheelRadius * 0.45, wheelDepth * 1.08, '#c7d0dc'));
   });
 }
 
 function addNoseLandingGear(group, item, fuselageY, fuselageRadius, metalColor, tireColor) {
-  const gearX = item.x + item.length * 0.175;
-  const wheelRadius = 0.32;
-  const wheelDepth = 0.12;
+  const mainGearX = item.x + item.length * 0.535;
+  const gearX = mainGearX - BOEING_737_800.wheelbase;
+  const wheelRadius = BOEING_737_800.noseWheelRadius;
+  const wheelDepth = BOEING_737_800.noseWheelDepth;
+  const wheelGap = 0.07;
+  const wheelCenterSeparation = wheelDepth + wheelGap;
 
   group.add(createLimb(
     new THREE.Vector3(gearX, fuselageY - fuselageRadius * 0.82, item.z),
-    new THREE.Vector3(gearX, 0.62, item.z),
+    new THREE.Vector3(gearX, wheelRadius + 0.31, item.z),
     0.052,
     metalColor,
   ));
+  group.add(createLimb(
+    new THREE.Vector3(gearX, wheelRadius, item.z - wheelCenterSeparation / 2),
+    new THREE.Vector3(gearX, wheelRadius, item.z + wheelCenterSeparation / 2),
+    0.035,
+    metalColor,
+  ));
   [-1, 1].forEach((side) => {
-    group.add(createWheel(gearX, wheelRadius, item.z + side * 0.16, wheelRadius, wheelDepth, tireColor));
-    group.add(createWheel(gearX, wheelRadius, item.z + side * 0.16, wheelRadius * 0.42, wheelDepth * 1.08, '#c7d0dc'));
+    const wheelZ = item.z + side * wheelCenterSeparation / 2;
+    group.add(createWheel(gearX, wheelRadius, wheelZ, wheelRadius, wheelDepth, tireColor));
+    group.add(createWheel(gearX, wheelRadius, wheelZ, wheelRadius * 0.42, wheelDepth * 1.08, '#c7d0dc'));
   });
 }
 
@@ -2107,4 +2169,3 @@ function createEdges(geometry, color, position) {
   edges.position.copy(position);
   return edges;
 }
-
