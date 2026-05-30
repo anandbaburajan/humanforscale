@@ -177,11 +177,13 @@ function createRaceTrack(item) {
     group.add(line);
   });
 
+  const runnerStartOffset = 0.48;
+
   for (let lane = 0; lane < item.lanes; lane += 1) {
     const runner = createHumanSilhouette({
       ...HUMAN_SCALE,
       color: lane % 2 === 0 ? '#51e4d4' : '#9fe870',
-      x: item.x + 0.48 + lane * 0.08,
+      x: item.x + runnerStartOffset,
       z: item.z - trackWidth / 2 + item.laneWidth * (lane + 0.5),
     });
     runner.position.y = item.height;
