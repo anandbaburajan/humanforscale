@@ -1,13 +1,13 @@
 <img
    src="./public/apple-touch-icon.png"
-   alt="HowBigIsIt logo"
+   alt="HumanForScale logo"
    height="40px"
    width="40px"
 />
 
-HowBigIsIt helps you see how big things really are. [Try it out](https://howbigisit.app)!
+HumanForScale helps you see how big things really are. [Try it out](https://humanforscale.app)!
 
 <img
    src="./public/meta.png"
-   alt="HowBigIsIt meta image"
+   alt="HumanForScale meta image"
 />

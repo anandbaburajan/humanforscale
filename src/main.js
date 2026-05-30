@@ -103,7 +103,7 @@ function buildScene() {
 function setupBrandLabel() {
   const brandLabel = document.createElement('div');
   brandLabel.className = 'brand-label';
-  brandLabel.textContent = 'HowBigIsIt';
+  brandLabel.textContent = 'HumanForScale';
   sceneRoot.appendChild(brandLabel);
 }
 
