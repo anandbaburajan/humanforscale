@@ -1,17 +1,13 @@
-# HowBigIsIt
+<img
+   src="./public/apple-touch-icon.png"
+   alt="HowBigIsIt logo"
+   height="40px"
+   width="40px"
+/>
 
-A dark themed Three.js visualizer showing exact-scale low-poly references:
-a car, Boeing 737, blue whale, Eiffel Tower, soccer field, 100 meters, 1 km, and 1 mile.
+HowBigIsIt helps you see how big things really are. [Try it out](https://howbigisit.app)!
 
-## Development
-
-```bash
-npm install
-npm run dev
-```
-
-## Build
-
-```bash
-npm run build
-```
+<img
+   src="./public/meta.png"
+   alt="HowBigIsIt meta image"
+/>
