@@ -90,13 +90,13 @@ canvas {
 }
 
 .custom-dimensions-form__field span {
-  color: #c8c8c8;
+  color: #9a9a9a;
   line-height: 1.15;
   text-transform: uppercase;
 }
 
 .custom-dimensions-form__field small {
-  color: #d8d8d8;
+  color: #9a9a9a;
   font: inherit;
   white-space: nowrap;
 }
@@ -121,6 +121,11 @@ canvas {
     0 0 0 1px rgba(216, 216, 216, 0.34),
     0 0 18px rgba(216, 216, 216, 0.12),
     inset 0 0 16px rgba(0, 0, 0, 0.72);
+}
+
+.custom-dimensions-form input::placeholder {
+  color: #9a9a9a;
+  opacity: 1;
 }
 
 .custom-dimensions-form input::-webkit-outer-spin-button,
