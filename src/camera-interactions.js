@@ -30,11 +30,19 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
     time: 0,
   };
   const lastTap = {
+    pointerType: null,
     x: 0,
     y: 0,
     time: -Infinity,
   };
+  const temporaryPanGesture = {
+    pointerId: null,
+    previousLeftMouseAction: null,
+    previousOneTouchAction: null,
+  };
   let pinchDistance = null;
+  let isPanModifierActive = false;
+  let isPointerPanDrag = false;
 
   setupPointerFocus();
 
@@ -44,6 +52,10 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
     renderer.domElement.addEventListener('pointermove', onPointerMove, { capture: true, passive: true });
     renderer.domElement.addEventListener('pointerup', onPointerUp, { capture: true, passive: true });
     renderer.domElement.addEventListener('pointercancel', onPointerCancel, { capture: true, passive: true });
+    renderer.domElement.addEventListener('lostpointercapture', onPointerCancel, { capture: true, passive: true });
+    window.addEventListener('keydown', onPanModifierChange, { passive: true });
+    window.addEventListener('keyup', onPanModifierChange, { passive: true });
+    window.addEventListener('blur', clearPanCursorState, { passive: true });
   }
 
   function onWheelDolly(event) {
@@ -56,6 +68,8 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
   }
 
   function onPointerDown(event) {
+    const now = window.performance.now();
+
     activePointers.add(event.pointerId);
     activePointerPositions.set(event.pointerId, {
       x: event.clientX,
@@ -63,6 +77,10 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
     });
 
     if (event.pointerType === 'touch' && activePointers.size === 2) {
+      if (temporaryPanGesture.pointerId !== null) {
+        lastTap.time = -Infinity;
+      }
+      endTemporaryPanGesture();
       pinchDistance = getPinchDistance();
       tapStart.pointerId = null;
       return;
@@ -73,10 +91,30 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
       return;
     }
 
+    const isSecondTap = isRecentTap(event.pointerType, event.clientX, event.clientY, now);
+
+    if (event.pointerType === 'touch' && isSecondTap) {
+      startTemporaryPanGesture(event);
+    }
+
+    if (event.pointerType === 'mouse' && event.button === 0 && isSecondTap) {
+      startTemporaryPanGesture(event);
+    }
+
+    if (event.pointerType === 'mouse') {
+      isPointerPanDrag = temporaryPanGesture.pointerId === event.pointerId
+        || event.button === 2
+        || event.metaKey
+        || event.ctrlKey
+        || event.shiftKey;
+      isPanModifierActive = event.metaKey || event.ctrlKey || event.shiftKey;
+      updatePanCursor();
+    }
+
     tapStart.pointerId = event.pointerId;
     tapStart.x = event.clientX;
     tapStart.y = event.clientY;
-    tapStart.time = window.performance.now();
+    tapStart.time = now;
   }
 
   function onPointerMove(event) {
@@ -110,8 +148,18 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
 
   function onPointerUp(event) {
     const wasSinglePointerTap = activePointers.size === 1 && tapStart.pointerId === event.pointerId;
+    const wasTemporaryPanGesture = temporaryPanGesture.pointerId === event.pointerId;
     activePointers.delete(event.pointerId);
     activePointerPositions.delete(event.pointerId);
+
+    if (event.pointerType === 'mouse') {
+      isPointerPanDrag = false;
+      updatePanCursor();
+    }
+
+    if (wasTemporaryPanGesture) {
+      endTemporaryPanGesture();
+    }
 
     if (activePointers.size < 2) {
       pinchDistance = null;
@@ -128,13 +176,19 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
     tapStart.pointerId = null;
 
     if (movement > TAP_FOCUS_MAX_MOVEMENT || duration > TAP_FOCUS_MAX_DURATION) {
+      if (wasTemporaryPanGesture) {
+        lastTap.time = -Infinity;
+      }
       return;
     }
 
     const delay = now - lastTap.time;
     const tapDistance = getScreenDistance(event.clientX, event.clientY, lastTap.x, lastTap.y);
-    const isDoubleTap = delay <= DOUBLE_TAP_MAX_DELAY && tapDistance <= DOUBLE_TAP_MAX_MOVEMENT;
+    const isDoubleTap = lastTap.pointerType === event.pointerType
+      && delay <= DOUBLE_TAP_MAX_DELAY
+      && tapDistance <= DOUBLE_TAP_MAX_MOVEMENT;
 
+    lastTap.pointerType = event.pointerType;
     lastTap.x = event.clientX;
     lastTap.y = event.clientY;
     lastTap.time = now;
@@ -146,6 +200,16 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
   }
 
   function onPointerCancel(event) {
+    if (event.pointerType === 'mouse') {
+      isPointerPanDrag = false;
+      updatePanCursor();
+    }
+
+    if (temporaryPanGesture.pointerId === event.pointerId) {
+      lastTap.time = -Infinity;
+      endTemporaryPanGesture();
+    }
+
     activePointers.delete(event.pointerId);
     activePointerPositions.delete(event.pointerId);
     tapStart.pointerId = null;
@@ -153,6 +217,77 @@ export function setupCameraInteractions({ renderer, camera, controls, focusableO
     if (activePointers.size < 2) {
       pinchDistance = null;
     }
+  }
+
+  function startTemporaryPanGesture(event) {
+    if (temporaryPanGesture.pointerId !== null) {
+      return;
+    }
+
+    temporaryPanGesture.pointerId = event.pointerId;
+
+    if (event.pointerType === 'mouse') {
+      temporaryPanGesture.previousLeftMouseAction = controls.mouseButtons.LEFT;
+      controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+      return;
+    }
+
+    if (event.pointerType === 'touch') {
+      temporaryPanGesture.previousOneTouchAction = controls.touches.ONE;
+      controls.touches.ONE = THREE.TOUCH.PAN;
+    }
+  }
+
+  function endTemporaryPanGesture() {
+    if (temporaryPanGesture.pointerId === null) {
+      return;
+    }
+
+    if (temporaryPanGesture.previousLeftMouseAction !== null) {
+      controls.mouseButtons.LEFT = temporaryPanGesture.previousLeftMouseAction;
+    }
+
+    if (temporaryPanGesture.previousOneTouchAction !== null) {
+      controls.touches.ONE = temporaryPanGesture.previousOneTouchAction;
+    }
+
+    temporaryPanGesture.pointerId = null;
+    temporaryPanGesture.previousLeftMouseAction = null;
+    temporaryPanGesture.previousOneTouchAction = null;
+  }
+
+  function onPanModifierChange(event) {
+    if (!isPanModifierKey(event)) {
+      return;
+    }
+
+    isPanModifierActive = event.metaKey || event.ctrlKey || event.shiftKey;
+    updatePanCursor();
+  }
+
+  function clearPanCursorState() {
+    isPanModifierActive = false;
+    isPointerPanDrag = false;
+    updatePanCursor();
+  }
+
+  function updatePanCursor() {
+    renderer.domElement.classList.toggle('is-pan-cursor', isPanModifierActive || isPointerPanDrag);
+    renderer.domElement.classList.toggle('is-panning', isPointerPanDrag);
+  }
+
+  function isPanModifierKey(event) {
+    return event.key === 'Meta' || event.key === 'Control' || event.key === 'Shift';
+  }
+
+  function isRecentTap(pointerType, clientX, clientY, now) {
+    const delay = now - lastTap.time;
+
+    if (lastTap.pointerType !== pointerType || delay > DOUBLE_TAP_MAX_DELAY) {
+      return false;
+    }
+
+    return getScreenDistance(clientX, clientY, lastTap.x, lastTap.y) <= DOUBLE_TAP_MAX_MOVEMENT;
   }
 
   function focusCameraAt(clientX, clientY) {

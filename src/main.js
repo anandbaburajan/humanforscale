@@ -17,6 +17,7 @@ import {
   LABEL_WIDTH,
   MAX_CAMERA_DISTANCE,
   MIN_CAMERA_DISTANCE,
+  MOBILE_INITIAL_CAMERA_POSITION,
   OBJECTS,
   WORLD_FOCUS_CENTER,
   WORLD_FOCUS_RADIUS,
@@ -303,14 +304,42 @@ function createCustomObjectItem({ length, width, height }) {
 
 function focusCameraOnItem(item) {
   const center = new THREE.Vector3(item.x + item.length / 2, item.height / 2, item.z);
-  const largestDimension = Math.max(item.length, item.width, item.height, HUMAN_SCALE.height);
-  const distance = THREE.MathUtils.clamp(largestDimension * 1.5, 4, MAX_CAMERA_DISTANCE * 0.9);
   const cameraDirection = new THREE.Vector3(-0.62, 0.42, 0.66).normalize();
+  const distance = getItemFocusDistance(item, cameraDirection);
 
   controls.target.copy(center);
   controls.cursor.copy(center);
   camera.position.copy(center).addScaledVector(cameraDirection, distance);
   controls.update();
+}
+
+function getItemFocusDistance(item, cameraDirection) {
+  const halfSize = new THREE.Vector3(
+    Math.max(item.length, HUMAN_SCALE.length) / 2,
+    Math.max(item.height, HUMAN_SCALE.height) / 2,
+    Math.max(item.width, HUMAN_SCALE.width) / 2,
+  );
+  const cameraForward = cameraDirection.clone().negate();
+  const viewRight = new THREE.Vector3().crossVectors(cameraForward, camera.up).normalize();
+  const viewUp = new THREE.Vector3().crossVectors(viewRight, cameraForward).normalize();
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+
+  const projectedHalfWidth = getProjectedHalfExtent(halfSize, viewRight);
+  const projectedHalfHeight = getProjectedHalfExtent(halfSize, viewUp);
+  const projectedHalfDepth = getProjectedHalfExtent(halfSize, cameraForward);
+  const fitDistance = Math.max(
+    projectedHalfWidth / Math.tan(horizontalFov / 2),
+    projectedHalfHeight / Math.tan(verticalFov / 2),
+  );
+
+  return THREE.MathUtils.clamp((fitDistance + projectedHalfDepth) * 1.18, 4, MAX_CAMERA_DISTANCE * 0.9);
+}
+
+function getProjectedHalfExtent(halfSize, axis) {
+  return Math.abs(axis.x) * halfSize.x
+    + Math.abs(axis.y) * halfSize.y
+    + Math.abs(axis.z) * halfSize.z;
 }
 
 function disposeSceneObject(object) {
@@ -338,7 +367,7 @@ function setInitialCameraView() {
   camera.updateProjectionMatrix();
 
   controls.target.copy(INITIAL_CAMERA_TARGET);
-  camera.position.copy(INITIAL_CAMERA_POSITION);
+  camera.position.copy(mobileCustomFormQuery.matches ? MOBILE_INITIAL_CAMERA_POSITION : INITIAL_CAMERA_POSITION);
   controls.update();
   controls.saveState();
 }

@@ -39,6 +39,14 @@ canvas {
   -webkit-user-select: none;
 }
 
+canvas.is-pan-cursor {
+  cursor: grab;
+}
+
+canvas.is-panning {
+  cursor: grabbing;
+}
+
 .brand-label {
   position: absolute;
   top: 16px;
