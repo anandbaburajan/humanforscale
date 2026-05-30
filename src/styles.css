@@ -255,15 +255,15 @@ canvas.is-panning {
     z-index: 4;
     display: grid;
     place-items: center;
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     border: 0;
-    border-radius: 999px;
+    border-radius: 0;
     background: #ffffff;
     color: #000000;
     cursor: pointer;
-    font: 900 32px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-    padding: 0 0 3px;
+    font: 900 28px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    padding: 0;
     box-shadow:
       0 14px 38px rgba(0, 0, 0, 0.5),
       0 0 0 1px rgba(0, 0, 0, 0.22);
