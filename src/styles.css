@@ -45,15 +45,60 @@ canvas {
   left: 16px;
   z-index: 2;
   color: #d8d8d8;
-  font: 800 14px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font: 800 18px/34px ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   letter-spacing: 0;
   pointer-events: none;
 }
 
-.custom-dimensions-form {
+.coffee-button {
   position: absolute;
   top: 16px;
   right: 16px;
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #ffffff;
+  background: #ffffff;
+  color: #000000;
+  font: 900 12px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  letter-spacing: 0;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+}
+
+.coffee-button:hover {
+  background: #d8d8d8;
+  border-color: #d8d8d8;
+}
+
+.coffee-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.custom-object-toggle {
+  display: none;
+}
+
+.custom-dimensions-backdrop {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgba(0, 0, 0, 0.46);
+}
+
+.custom-dimensions-backdrop[hidden] {
+  display: none;
+}
+
+.custom-dimensions-form {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
   z-index: 2;
   width: min(160px, calc(100vw - 32px));
   padding: 9px;
@@ -70,15 +115,27 @@ canvas {
   -webkit-user-select: text;
 }
 
-.custom-dimensions-form__title {
-  display: block;
+.custom-dimensions-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 9px;
   border-bottom: 1px solid rgba(196, 196, 196, 0.5);
+  padding-bottom: 6px;
+}
+
+.custom-dimensions-form__title {
+  display: block;
+  min-width: 0;
   color: #dedede;
   font-size: 12px;
   letter-spacing: 0;
-  padding-bottom: 6px;
   text-transform: uppercase;
+}
+
+.custom-dimensions-form__close {
+  display: none;
 }
 
 .custom-dimensions-form__field {
@@ -139,7 +196,7 @@ canvas {
   -moz-appearance: textfield;
 }
 
-.custom-dimensions-form button {
+.custom-dimensions-form__submit {
   width: 100%;
   height: 32px;
   margin-top: 10px;
@@ -153,7 +210,7 @@ canvas {
   box-shadow: 0 0 18px rgba(216, 216, 216, 0.1);
 }
 
-.custom-dimensions-form button:hover {
+.custom-dimensions-form__submit:hover {
   background: #c4c4c4;
 }
 
@@ -169,19 +226,115 @@ canvas {
 
 @media (max-width: 520px) {
   .brand-label {
-    top: 10px;
-    left: 10px;
-    font-size: 12px;
+    top: 16px;
+    left: 16px;
+    font-size: 16px;
+    line-height: 30px;
+  }
+
+  .coffee-button {
+    top: 16px;
+    right: 16px;
+    min-height: 30px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+
+  .custom-object-toggle {
+    position: absolute;
+    right: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border: 0;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #000000;
+    cursor: pointer;
+    font: 900 32px/1 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    padding: 0 0 3px;
+    box-shadow:
+      0 14px 38px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(0, 0, 0, 0.22);
+  }
+
+  .custom-object-toggle:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
+  }
+
+  .custom-dimensions-backdrop {
+    display: block;
   }
 
   .custom-dimensions-form {
-    top: 10px;
-    right: 10px;
-    width: min(158px, calc(100vw - 20px));
-    padding: 8px;
+    display: none;
+    right: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: 20px;
+    z-index: 4;
+    width: auto;
+    padding: 12px;
+  }
+
+  .custom-dimensions-form.is-open {
+    display: block;
+  }
+
+  .custom-dimensions-form__header {
+    margin-bottom: 10px;
+    padding: 0 0 12px;
+  }
+
+  .custom-dimensions-form__close {
+    display: grid;
+    place-items: center;
+    position: relative;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 24px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    margin-right: -2px;
+    padding: 0;
+  }
+
+  .custom-dimensions-form__close::before,
+  .custom-dimensions-form__close::after {
+    position: absolute;
+    width: 14px;
+    height: 2px;
+    border-radius: 999px;
+    background: #d8d8d8;
+    content: "";
+  }
+
+  .custom-dimensions-form__close::before {
+    transform: rotate(45deg);
+  }
+
+  .custom-dimensions-form__close::after {
+    transform: rotate(-45deg);
+  }
+
+  .custom-dimensions-form__close:hover {
+    opacity: 0.72;
+  }
+
+  .custom-dimensions-form__close:focus-visible {
+    outline: 2px solid #d8d8d8;
+    outline-offset: 2px;
   }
 
   .custom-dimensions-form__field {
     grid-template-columns: minmax(0, 1fr) 52px;
+  }
+
+  .custom-dimensions-form__submit {
+    height: 44px;
   }
 }

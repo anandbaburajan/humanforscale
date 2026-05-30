@@ -66,9 +66,14 @@ scene.add(worldGroup);
 const scaleObjectGroups = [];
 const scaleObjectLabels = [];
 let customObjectDimensions = null;
+let customForm = null;
+let customFormToggle = null;
+let customFormBackdrop = null;
+const mobileCustomFormQuery = window.matchMedia('(max-width: 520px)');
 
 buildScene();
 setupBrandLabel();
+setupCoffeeButton();
 setupCustomForm();
 setupCameraInteractions({ renderer, camera, controls, focusableObjects });
 setInitialCameraView();
@@ -101,12 +106,42 @@ function setupBrandLabel() {
   sceneRoot.appendChild(brandLabel);
 }
 
+function setupCoffeeButton() {
+  const coffeeButton = document.createElement('a');
+  coffeeButton.className = 'coffee-button';
+  coffeeButton.href = 'https://buymeacoffee.com/anandbaburajan';
+  coffeeButton.target = '_blank';
+  coffeeButton.rel = 'noreferrer';
+  coffeeButton.textContent = 'Buy me a coffee';
+  sceneRoot.appendChild(coffeeButton);
+}
+
 function setupCustomForm() {
+  customFormToggle = document.createElement('button');
+  customFormToggle.className = 'custom-object-toggle';
+  customFormToggle.type = 'button';
+  customFormToggle.textContent = '+';
+  customFormToggle.setAttribute('aria-label', 'Add custom object');
+  customFormToggle.setAttribute('aria-controls', 'custom-dimensions-form');
+  customFormToggle.setAttribute('aria-expanded', 'false');
+  customFormToggle.addEventListener('click', openCustomFormDialog);
+
+  customFormBackdrop = document.createElement('div');
+  customFormBackdrop.className = 'custom-dimensions-backdrop';
+  customFormBackdrop.hidden = true;
+  customFormBackdrop.addEventListener('click', closeCustomFormDialog);
+
   const form = document.createElement('form');
+  customForm = form;
+  form.id = 'custom-dimensions-form';
   form.className = 'custom-dimensions-form';
   form.setAttribute('aria-label', 'Add custom cuboid');
+  form.setAttribute('aria-labelledby', 'custom-dimensions-title');
   form.innerHTML = `
-    <div class="custom-dimensions-form__title">Add a custom object</div>
+    <div class="custom-dimensions-form__header">
+      <div id="custom-dimensions-title" class="custom-dimensions-form__title">Add a custom object</div>
+      <button class="custom-dimensions-form__close" type="button" aria-label="Close custom object dialog"></button>
+    </div>
     <label class="custom-dimensions-form__field">
       <span>Length <small>(m)</small></span>
       <input name="custom-length" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="5.00" required>
@@ -119,11 +154,44 @@ function setupCustomForm() {
       <span>Height <small>(m)</small></span>
       <input name="custom-height" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="1.80" required>
     </label>
-    <button type="submit">Add</button>
+    <button class="custom-dimensions-form__submit" type="submit">Add</button>
     <p class="custom-dimensions-form__message" aria-live="polite"></p>
   `;
   form.addEventListener('submit', onCustomFormSubmit);
+  form.querySelector('.custom-dimensions-form__close').addEventListener('click', closeCustomFormDialog);
+  window.addEventListener('keydown', onCustomFormKeyDown);
+  sceneRoot.appendChild(customFormToggle);
+  sceneRoot.appendChild(customFormBackdrop);
   sceneRoot.appendChild(form);
+}
+
+function openCustomFormDialog() {
+  customForm.classList.add('is-open');
+  customForm.setAttribute('role', 'dialog');
+  customForm.setAttribute('aria-modal', 'true');
+  customFormBackdrop.hidden = false;
+  customFormToggle.setAttribute('aria-expanded', 'true');
+
+  const firstInput = customForm.elements.namedItem('custom-length');
+  requestAnimationFrame(() => firstInput?.focus());
+}
+
+function closeCustomFormDialog() {
+  customForm.classList.remove('is-open');
+  customForm.removeAttribute('role');
+  customForm.removeAttribute('aria-modal');
+  customFormBackdrop.hidden = true;
+  customFormToggle.setAttribute('aria-expanded', 'false');
+  customFormToggle.focus();
+}
+
+function onCustomFormKeyDown(event) {
+  if (event.key !== 'Escape' || !customForm.classList.contains('is-open')) {
+    return;
+  }
+
+  event.preventDefault();
+  closeCustomFormDialog();
 }
 
 function onCustomFormSubmit(event) {
@@ -139,8 +207,12 @@ function onCustomFormSubmit(event) {
   }
 
   message.textContent = '';
-  form.querySelector('button').textContent = 'Update';
+  form.querySelector('.custom-dimensions-form__submit').textContent = 'Update';
   setCustomObject(dimensions);
+
+  if (mobileCustomFormQuery.matches) {
+    closeCustomFormDialog();
+  }
 }
 
 function getCustomDimensions(form) {
