@@ -161,7 +161,7 @@ function setupHelpDialog() {
     <p id="help-dialog-description" class="help-dialog__description">
       <span>HumanForScale helps you see how big things really are.</span>
       <span>Compare familiar objects like a car, soccer field, Boeing 737, blue whale, and Eiffel Tower on the same scale.</span>
-      <span>You can also add your own object by entering its length, width, and height in metres. For example, a Falcon 9 rocket is 70 m long, 3.7 m wide, and 3.7 m tall.</span>
+      <span>You can also add your own object by entering its length, width, and height in metres. For example, a Falcon 9 rocket is 3.7 m long, 3.7 m wide, and 70 m tall.</span>
     </p>
   `;
   helpDialog.querySelector('.help-dialog__close').addEventListener('click', closeHelpDialog);
