@@ -170,7 +170,7 @@ function setupHelpDialog() {
     </div>
     <p id="help-dialog-description" class="help-dialog__description">
       <span>See how big things really are.</span>
-      <span>Compare familiar objects like a car, soccer field, Boeing 737, blue whale, (and more coming!), with a human for scale. More objects coming soon!</span>
+      <span>Compare familiar objects like a car, soccer field, Boeing 737, blue whale, etc., with a human for scale. More objects coming soon!</span>
       <span>You can also add your own object by entering its length, width, and height in metres. For example, a Falcon 9 rocket is 3.7 m long, 3.7 m wide, and 70 m tall.</span>
     </p>
   `;
