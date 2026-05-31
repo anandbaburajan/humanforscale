@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import './styles.css';
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import "./styles.css";
 
 import {
   CAMERA_FAR,
@@ -21,17 +21,17 @@ import {
   OBJECTS,
   WORLD_FOCUS_CENTER,
   WORLD_FOCUS_RADIUS,
-} from './config.js';
-import { setupCameraInteractions } from './camera-interactions.js';
-import { createGroundText, createScaleObject } from './scale-objects.js';
+} from "./config.js";
+import { setupCameraInteractions } from "./camera-interactions.js";
+import { createGroundText, createScaleObject } from "./scale-objects.js";
 
-const sceneRoot = document.querySelector('#app');
+const sceneRoot = document.querySelector("#app");
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: false,
   logarithmicDepthBuffer: true,
-  powerPreference: 'high-performance',
+  powerPreference: "high-performance",
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(sceneRoot.clientWidth, sceneRoot.clientHeight);
@@ -39,10 +39,15 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 sceneRoot.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#05070d');
-scene.fog = new THREE.Fog('#05070d', 620, 1800);
+scene.background = new THREE.Color("#05070d");
+scene.fog = new THREE.Fog("#05070d", 620, 1800);
 
-const camera = new THREE.PerspectiveCamera(48, sceneRoot.clientWidth / sceneRoot.clientHeight, 0.01, 5000);
+const camera = new THREE.PerspectiveCamera(
+  48,
+  sceneRoot.clientWidth / sceneRoot.clientHeight,
+  0.01,
+  5000,
+);
 camera.position.set(56, 34, 72);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -50,14 +55,14 @@ configureControls();
 
 const focusableObjects = [];
 
-const ambient = new THREE.HemisphereLight('#9ebaff', '#10131c', 1.55);
+const ambient = new THREE.HemisphereLight("#9ebaff", "#10131c", 1.55);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight('#ffffff', 2.6);
+const keyLight = new THREE.DirectionalLight("#ffffff", 2.6);
 keyLight.position.set(20, 35, 22);
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight('#5b7dff', 1.1);
+const rimLight = new THREE.DirectionalLight("#5b7dff", 1.1);
 rimLight.position.set(-18, 15, -14);
 scene.add(rimLight);
 
@@ -73,7 +78,7 @@ let customFormBackdrop = null;
 let helpDialog = null;
 let helpDialogBackdrop = null;
 let helpDialogToggle = null;
-const mobileCustomFormQuery = window.matchMedia('(max-width: 520px)');
+const mobileCustomFormQuery = window.matchMedia("(max-width: 520px)");
 
 buildScene();
 setupBrandLabel();
@@ -90,7 +95,7 @@ function buildScene() {
 
   const groundGeometry = new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE);
   const groundMaterial = new THREE.MeshBasicMaterial({
-    color: '#080a0e',
+    color: "#080a0e",
   });
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.position.set(GROUND_CENTER_X, -0.014, 0);
@@ -98,36 +103,41 @@ function buildScene() {
   scene.add(ground);
   focusableObjects.push(ground);
 
-  const grid = new THREE.GridHelper(GROUND_SIZE, GROUND_SIZE / GRID_BOX_SIZE, '#1d222b', '#1d222b');
+  const grid = new THREE.GridHelper(
+    GROUND_SIZE,
+    GROUND_SIZE / GRID_BOX_SIZE,
+    "#1d222b",
+    "#1d222b",
+  );
   grid.position.set(GROUND_CENTER_X, -0.002, 0);
   scene.add(grid);
 
-  window.addEventListener('resize', onResize);
+  window.addEventListener("resize", onResize);
 }
 
 function setupBrandLabel() {
-  const brandLockup = document.createElement('div');
-  brandLockup.className = 'brand-lockup';
+  const brandLockup = document.createElement("div");
+  brandLockup.className = "brand-lockup";
 
-  const brandLabel = document.createElement('div');
-  brandLabel.className = 'brand-label';
-  brandLabel.textContent = 'HumanForScale';
+  const brandLabel = document.createElement("div");
+  brandLabel.className = "brand-label";
+  brandLabel.textContent = "HumanForScale";
 
-  helpDialogToggle = document.createElement('button');
-  helpDialogToggle.className = 'help-button';
-  helpDialogToggle.type = 'button';
-  helpDialogToggle.title = 'About HumanForScale';
-  helpDialogToggle.setAttribute('aria-label', 'About HumanForScale');
-  helpDialogToggle.setAttribute('aria-controls', 'help-dialog');
-  helpDialogToggle.setAttribute('aria-haspopup', 'dialog');
-  helpDialogToggle.setAttribute('aria-expanded', 'false');
+  helpDialogToggle = document.createElement("button");
+  helpDialogToggle.className = "help-button";
+  helpDialogToggle.type = "button";
+  helpDialogToggle.title = "About HumanForScale";
+  helpDialogToggle.setAttribute("aria-label", "About HumanForScale");
+  helpDialogToggle.setAttribute("aria-controls", "help-dialog");
+  helpDialogToggle.setAttribute("aria-haspopup", "dialog");
+  helpDialogToggle.setAttribute("aria-expanded", "false");
   helpDialogToggle.innerHTML = `
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 17h.01" />
       <path d="M9.8 9.3a2.4 2.4 0 1 1 3.2 2.25c-.78.3-1 .72-1 1.45v.25" />
     </svg>
   `;
-  helpDialogToggle.addEventListener('click', openHelpDialog);
+  helpDialogToggle.addEventListener("click", openHelpDialog);
 
   brandLockup.appendChild(brandLabel);
   brandLockup.appendChild(helpDialogToggle);
@@ -135,19 +145,19 @@ function setupBrandLabel() {
 }
 
 function setupHelpDialog() {
-  helpDialogBackdrop = document.createElement('div');
-  helpDialogBackdrop.className = 'help-dialog-backdrop';
+  helpDialogBackdrop = document.createElement("div");
+  helpDialogBackdrop.className = "help-dialog-backdrop";
   helpDialogBackdrop.hidden = true;
-  helpDialogBackdrop.addEventListener('click', closeHelpDialog);
+  helpDialogBackdrop.addEventListener("click", closeHelpDialog);
 
-  helpDialog = document.createElement('section');
-  helpDialog.id = 'help-dialog';
-  helpDialog.className = 'help-dialog';
+  helpDialog = document.createElement("section");
+  helpDialog.id = "help-dialog";
+  helpDialog.className = "help-dialog";
   helpDialog.hidden = true;
-  helpDialog.setAttribute('role', 'dialog');
-  helpDialog.setAttribute('aria-modal', 'true');
-  helpDialog.setAttribute('aria-labelledby', 'help-dialog-title');
-  helpDialog.setAttribute('aria-describedby', 'help-dialog-description');
+  helpDialog.setAttribute("role", "dialog");
+  helpDialog.setAttribute("aria-modal", "true");
+  helpDialog.setAttribute("aria-labelledby", "help-dialog-title");
+  helpDialog.setAttribute("aria-describedby", "help-dialog-description");
   helpDialog.innerHTML = `
     <div class="help-dialog__header">
       <div id="help-dialog-title" class="help-dialog__title">HumanForScale</div>
@@ -159,13 +169,15 @@ function setupHelpDialog() {
       </button>
     </div>
     <p id="help-dialog-description" class="help-dialog__description">
-      <span>HumanForScale helps you see how big things really are.</span>
-      <span>Compare familiar objects like a car, soccer field, Boeing 737, blue whale, and Eiffel Tower on the same scale.</span>
+      <span>See how big things really are.</span>
+      <span>Compare familiar objects like a car, soccer field, Boeing 737, blue whale, (and more coming!), with a human for scale. More objects coming soon!</span>
       <span>You can also add your own object by entering its length, width, and height in metres. For example, a Falcon 9 rocket is 3.7 m long, 3.7 m wide, and 70 m tall.</span>
     </p>
   `;
-  helpDialog.querySelector('.help-dialog__close').addEventListener('click', closeHelpDialog);
-  window.addEventListener('keydown', onHelpDialogKeyDown);
+  helpDialog
+    .querySelector(".help-dialog__close")
+    .addEventListener("click", closeHelpDialog);
+  window.addEventListener("keydown", onHelpDialogKeyDown);
 
   sceneRoot.appendChild(helpDialogBackdrop);
   sceneRoot.appendChild(helpDialog);
@@ -174,22 +186,22 @@ function setupHelpDialog() {
 function openHelpDialog() {
   helpDialog.hidden = false;
   helpDialogBackdrop.hidden = false;
-  helpDialogToggle.setAttribute('aria-expanded', 'true');
+  helpDialogToggle.setAttribute("aria-expanded", "true");
 
   requestAnimationFrame(() => {
-    helpDialog.querySelector('.help-dialog__close')?.focus();
+    helpDialog.querySelector(".help-dialog__close")?.focus();
   });
 }
 
 function closeHelpDialog() {
   helpDialog.hidden = true;
   helpDialogBackdrop.hidden = true;
-  helpDialogToggle.setAttribute('aria-expanded', 'false');
+  helpDialogToggle.setAttribute("aria-expanded", "false");
   helpDialogToggle.focus();
 }
 
 function onHelpDialogKeyDown(event) {
-  if (event.key !== 'Escape' || helpDialog.hidden) {
+  if (event.key !== "Escape" || helpDialog.hidden) {
     return;
   }
 
@@ -198,21 +210,21 @@ function onHelpDialogKeyDown(event) {
 }
 
 function setupCoffeeButton() {
-  const coffeeButton = document.createElement('a');
-  coffeeButton.className = 'coffee-button';
-  coffeeButton.href = 'https://buymeacoffee.com/anandbaburajan';
-  coffeeButton.target = '_blank';
-  coffeeButton.rel = 'noreferrer';
-  coffeeButton.textContent = 'Buy me a coffee';
+  const coffeeButton = document.createElement("a");
+  coffeeButton.className = "coffee-button";
+  coffeeButton.href = "https://buymeacoffee.com/anandbaburajan";
+  coffeeButton.target = "_blank";
+  coffeeButton.rel = "noreferrer";
+  coffeeButton.textContent = "Buy me a coffee";
   sceneRoot.appendChild(coffeeButton);
 }
 
 function setupResetButton() {
-  const resetButton = document.createElement('button');
-  resetButton.className = 'reset-camera-button';
-  resetButton.type = 'button';
-  resetButton.title = 'Reset view';
-  resetButton.setAttribute('aria-label', 'Reset view');
+  const resetButton = document.createElement("button");
+  resetButton.className = "reset-camera-button";
+  resetButton.type = "button";
+  resetButton.title = "Reset view";
+  resetButton.setAttribute("aria-label", "Reset view");
   resetButton.innerHTML = `
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M18.2 8.2A7.2 7.2 0 1 0 19 14" />
@@ -220,31 +232,31 @@ function setupResetButton() {
       <path d="M18.2 8.2l-.1-4.2" />
     </svg>
   `;
-  resetButton.addEventListener('click', setInitialCameraView);
+  resetButton.addEventListener("click", setInitialCameraView);
   sceneRoot.appendChild(resetButton);
 }
 
 function setupCustomForm() {
-  customFormToggle = document.createElement('button');
-  customFormToggle.className = 'custom-object-toggle';
-  customFormToggle.type = 'button';
-  customFormToggle.textContent = '+';
-  customFormToggle.setAttribute('aria-label', 'Add custom object');
-  customFormToggle.setAttribute('aria-controls', 'custom-dimensions-form');
-  customFormToggle.setAttribute('aria-expanded', 'false');
-  customFormToggle.addEventListener('click', openCustomFormDialog);
+  customFormToggle = document.createElement("button");
+  customFormToggle.className = "custom-object-toggle";
+  customFormToggle.type = "button";
+  customFormToggle.textContent = "+";
+  customFormToggle.setAttribute("aria-label", "Add custom object");
+  customFormToggle.setAttribute("aria-controls", "custom-dimensions-form");
+  customFormToggle.setAttribute("aria-expanded", "false");
+  customFormToggle.addEventListener("click", openCustomFormDialog);
 
-  customFormBackdrop = document.createElement('div');
-  customFormBackdrop.className = 'custom-dimensions-backdrop';
+  customFormBackdrop = document.createElement("div");
+  customFormBackdrop.className = "custom-dimensions-backdrop";
   customFormBackdrop.hidden = true;
-  customFormBackdrop.addEventListener('click', closeCustomFormDialog);
+  customFormBackdrop.addEventListener("click", closeCustomFormDialog);
 
-  const form = document.createElement('form');
+  const form = document.createElement("form");
   customForm = form;
-  form.id = 'custom-dimensions-form';
-  form.className = 'custom-dimensions-form';
-  form.setAttribute('aria-label', 'Add custom cuboid');
-  form.setAttribute('aria-labelledby', 'custom-dimensions-title');
+  form.id = "custom-dimensions-form";
+  form.className = "custom-dimensions-form";
+  form.setAttribute("aria-label", "Add custom cuboid");
+  form.setAttribute("aria-labelledby", "custom-dimensions-title");
   form.innerHTML = `
     <div class="custom-dimensions-form__header">
       <div id="custom-dimensions-title" class="custom-dimensions-form__title">Add a custom object</div>
@@ -265,36 +277,38 @@ function setupCustomForm() {
     <button class="custom-dimensions-form__submit" type="submit">Add</button>
     <p class="custom-dimensions-form__message" aria-live="polite"></p>
   `;
-  form.addEventListener('submit', onCustomFormSubmit);
-  form.querySelector('.custom-dimensions-form__close').addEventListener('click', closeCustomFormDialog);
-  window.addEventListener('keydown', onCustomFormKeyDown);
+  form.addEventListener("submit", onCustomFormSubmit);
+  form
+    .querySelector(".custom-dimensions-form__close")
+    .addEventListener("click", closeCustomFormDialog);
+  window.addEventListener("keydown", onCustomFormKeyDown);
   sceneRoot.appendChild(customFormToggle);
   sceneRoot.appendChild(customFormBackdrop);
   sceneRoot.appendChild(form);
 }
 
 function openCustomFormDialog() {
-  customForm.classList.add('is-open');
-  customForm.setAttribute('role', 'dialog');
-  customForm.setAttribute('aria-modal', 'true');
+  customForm.classList.add("is-open");
+  customForm.setAttribute("role", "dialog");
+  customForm.setAttribute("aria-modal", "true");
   customFormBackdrop.hidden = false;
-  customFormToggle.setAttribute('aria-expanded', 'true');
+  customFormToggle.setAttribute("aria-expanded", "true");
 
-  const firstInput = customForm.elements.namedItem('custom-length');
+  const firstInput = customForm.elements.namedItem("custom-length");
   requestAnimationFrame(() => firstInput?.focus());
 }
 
 function closeCustomFormDialog() {
-  customForm.classList.remove('is-open');
-  customForm.removeAttribute('role');
-  customForm.removeAttribute('aria-modal');
+  customForm.classList.remove("is-open");
+  customForm.removeAttribute("role");
+  customForm.removeAttribute("aria-modal");
   customFormBackdrop.hidden = true;
-  customFormToggle.setAttribute('aria-expanded', 'false');
+  customFormToggle.setAttribute("aria-expanded", "false");
   customFormToggle.focus();
 }
 
 function onCustomFormKeyDown(event) {
-  if (event.key !== 'Escape' || !customForm.classList.contains('is-open')) {
+  if (event.key !== "Escape" || !customForm.classList.contains("is-open")) {
     return;
   }
 
@@ -307,15 +321,15 @@ function onCustomFormSubmit(event) {
 
   const form = event.currentTarget;
   const dimensions = getCustomDimensions(form);
-  const message = form.querySelector('.custom-dimensions-form__message');
+  const message = form.querySelector(".custom-dimensions-form__message");
 
   if (!dimensions) {
-    message.textContent = 'Use positive metre values.';
+    message.textContent = "Use positive metre values.";
     return;
   }
 
-  message.textContent = '';
-  form.querySelector('.custom-dimensions-form__submit').textContent = 'Update';
+  message.textContent = "";
+  form.querySelector(".custom-dimensions-form__submit").textContent = "Update";
   setCustomObject(dimensions);
 
   if (mobileCustomFormQuery.matches) {
@@ -324,7 +338,7 @@ function onCustomFormSubmit(event) {
 }
 
 function getCustomDimensions(form) {
-  const values = ['length', 'width', 'height'].map((key) => {
+  const values = ["length", "width", "height"].map((key) => {
     const input = form.elements.namedItem(`custom-${key}`);
     return Number.parseFloat(input.value);
   });
@@ -387,7 +401,11 @@ function getVisibleScaleObjects() {
 
   const customObject = createCustomObjectItem(customObjectDimensions);
   const firstObject = OBJECTS[0];
-  const zOffset = -(customObject.width / 2 + firstObject.width / 2 + CUSTOM_OBJECT_ROW_GAP);
+  const zOffset = -(
+    customObject.width / 2 +
+    firstObject.width / 2 +
+    CUSTOM_OBJECT_ROW_GAP
+  );
   const shiftedObjects = OBJECTS.map((item) => ({
     ...item,
     z: item.z + zOffset,
@@ -398,8 +416,8 @@ function getVisibleScaleObjects() {
 
 function createCustomObjectItem({ length, width, height }) {
   return {
-    name: 'Custom',
-    shape: 'customCuboid',
+    name: "Custom",
+    shape: "customCuboid",
     length,
     width,
     height,
@@ -410,7 +428,11 @@ function createCustomObjectItem({ length, width, height }) {
 }
 
 function focusCameraOnItem(item) {
-  const center = new THREE.Vector3(item.x + item.length / 2, item.height / 2, item.z);
+  const center = new THREE.Vector3(
+    item.x + item.length / 2,
+    item.height / 2,
+    item.z,
+  );
   const cameraDirection = new THREE.Vector3(-0.62, 0.42, 0.66).normalize();
   const distance = getItemFocusDistance(item, cameraDirection);
 
@@ -427,10 +449,15 @@ function getItemFocusDistance(item, cameraDirection) {
     Math.max(item.width, HUMAN_SCALE.width) / 2,
   );
   const cameraForward = cameraDirection.clone().negate();
-  const viewRight = new THREE.Vector3().crossVectors(cameraForward, camera.up).normalize();
-  const viewUp = new THREE.Vector3().crossVectors(viewRight, cameraForward).normalize();
+  const viewRight = new THREE.Vector3()
+    .crossVectors(cameraForward, camera.up)
+    .normalize();
+  const viewUp = new THREE.Vector3()
+    .crossVectors(viewRight, cameraForward)
+    .normalize();
   const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+  const horizontalFov =
+    2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
 
   const projectedHalfWidth = getProjectedHalfExtent(halfSize, viewRight);
   const projectedHalfHeight = getProjectedHalfExtent(halfSize, viewUp);
@@ -440,13 +467,19 @@ function getItemFocusDistance(item, cameraDirection) {
     projectedHalfHeight / Math.tan(verticalFov / 2),
   );
 
-  return THREE.MathUtils.clamp((fitDistance + projectedHalfDepth) * 1.18, 4, MAX_CAMERA_DISTANCE * 0.9);
+  return THREE.MathUtils.clamp(
+    (fitDistance + projectedHalfDepth) * 1.18,
+    4,
+    MAX_CAMERA_DISTANCE * 0.9,
+  );
 }
 
 function getProjectedHalfExtent(halfSize, axis) {
-  return Math.abs(axis.x) * halfSize.x
-    + Math.abs(axis.y) * halfSize.y
-    + Math.abs(axis.z) * halfSize.z;
+  return (
+    Math.abs(axis.x) * halfSize.x +
+    Math.abs(axis.y) * halfSize.y +
+    Math.abs(axis.z) * halfSize.z
+  );
 }
 
 function disposeSceneObject(object) {
@@ -456,7 +489,9 @@ function disposeSceneObject(object) {
       node.geometry.dispose();
     }
 
-    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    const materials = Array.isArray(node.material)
+      ? node.material
+      : [node.material];
     materials.filter(Boolean).forEach((material) => {
       Object.values(material).forEach((value) => {
         if (value?.isTexture) {
@@ -474,7 +509,11 @@ function setInitialCameraView() {
   camera.updateProjectionMatrix();
 
   controls.target.copy(INITIAL_CAMERA_TARGET);
-  camera.position.copy(mobileCustomFormQuery.matches ? MOBILE_INITIAL_CAMERA_POSITION : INITIAL_CAMERA_POSITION);
+  camera.position.copy(
+    mobileCustomFormQuery.matches
+      ? MOBILE_INITIAL_CAMERA_POSITION
+      : INITIAL_CAMERA_POSITION,
+  );
   controls.update();
   controls.saveState();
 }
@@ -508,8 +547,6 @@ function configureControls() {
   };
   controls.listenToKeyEvents(window);
 }
-
-
 
 function onResize() {
   const width = sceneRoot.clientWidth;

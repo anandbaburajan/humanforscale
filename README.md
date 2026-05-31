@@ -5,7 +5,7 @@
    width="40px"
 />
 
-HumanForScale helps you see how big things really are. [Try it out](https://humanforscale.app)!
+HumanForScale lets you see how big things really are. [Try it out](https://humanforscale.app)!
 
 <img
    src="./public/meta.png"
